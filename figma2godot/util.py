@@ -14,7 +14,23 @@ def parse_color(s):
     return (r, g, b, a)
 
 
+def as_float(v, default=0.0):
+    """Figma component properties arrive as strings ("0.7"); coerce safely."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def truthy(v):
+    """Figma variant booleans arrive as "True"/"False" strings; "False" must be false."""
+    if isinstance(v, str):
+        return v.strip().lower() in ("true", "yes", "on", "1")
+    return bool(v)
+
+
 def num(x):
+    x = as_float(x)
     t = ("%.4f" % x).rstrip("0").rstrip(".")
     return t if t not in ("", "-0") else "0"
 

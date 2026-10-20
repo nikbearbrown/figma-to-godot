@@ -10,7 +10,7 @@ Mapping in one table (full detail in docs/MAPPING.md):
   component "Button", "Toggle" ...    Button, CheckButton, LineEdit, HSlider ...
 """
 import re
-from .util import node_name, gd_string, num, parse_color
+from .util import node_name, gd_string, num, parse_color, as_float, truthy, slug
 
 # Godot size flags
 SHRINK_BEGIN, FILL, EXPAND_FILL, SHRINK_CENTER, SHRINK_END = 0, 1, 3, 4, 8
@@ -26,9 +26,17 @@ WIDGETS = [
     (r"input|text ?field|textfield|text ?box", "LineEdit"),
     (r"divider|separator", "Separator"),
     (r"icon|image|avatar|thumbnail", "TextureRect"),
+    (r"coffee|link", "LinkButton"),
     (r"button|btn|cta", "Button"),
 ]
-INTERACTIVE = {"Button", "CheckButton", "CheckBox", "OptionButton"}
+# Properties each widget understands; anything else is reported, not silently dropped.
+KNOWN_PROPS = {
+    "Button": {"label", "style"}, "LinkButton": {"label", "url", "uri"},
+    "CheckButton": {"label", "checked"}, "CheckBox": {"label", "checked"},
+    "LineEdit": {"placeholder", "value"}, "HSlider": {"value", "max", "step"},
+    "ProgressBar": {"value", "max"}, "OptionButton": {"options", "selected", "label"},
+}
+INTERACTIVE = {"Button", "LinkButton", "CheckButton", "CheckBox", "OptionButton"}
 
 
 class Report:
@@ -74,6 +82,7 @@ class Converter:
         self.res_asset_root = res_asset_root
         self.asset_dir = asset_dir
         self.variations = {}  # shared across every scene in the design
+        self._fonts_seen = set()
 
     # ---------------------------------------------------------------- public
     def convert_frame(self, frame):
@@ -140,6 +149,12 @@ class Converter:
         self.variations.setdefault(key, {
             "base": base, "kind": kind, "var": var, "color": color["color"],
             "radius": radius, "border": border, "border_width": bw})
+        return key
+
+    def _variations_for_button(self, style):
+        key = "Button_%s" % slug(style).lower()
+        self.variations.setdefault(key, {"base": "Button", "kind": "button", "style": style,
+                                         "var": None, "color": "#000000"})
         return key
 
     # ------------------------------------------------------------ placement
@@ -238,6 +253,9 @@ class Converter:
                                                        self._place(n, ctx))
                 for ch in n.get("children", []):
                     self._emit(ch, self._child_path(parent, gn), ("control", None))
+            else:
+                # An empty frame is a spacer or a gap: keep it, it carries sizing.
+                self._add(parent, n["name"], "Control", self._place(n, ctx))
             return
         if cls == "Rect":
             self._emit_surface(n, parent, "Panel", n["name"], ctx=ctx)
@@ -309,7 +327,7 @@ class Converter:
         p = n.get("properties", {}) or {}
         if p.get("label"):
             return p["label"]
-        if n.get("text", {}).get("characters"):
+        if (n.get("text") or {}).get("characters"):
             return n["text"]["characters"]
         for ch in n.get("children", []) or []:
             if ch.get("type") == "TEXT":
@@ -339,15 +357,34 @@ class Converter:
                 if not is_default:
                     props.append("theme_type_variation = &\"%s\"" %
                                  self._variation("Label", "text", col))
-            if t.get("family"):
-                self.report.add("info", "%s/%s" % (self.where, n["name"]),
-                                "font %r not imported; Godot uses the theme font. "
-                                "Drop the .ttf into the project and set it on the theme." % t["family"])
+            if t.get("family") and t["family"] not in self._fonts_seen:
+                self._fonts_seen.add(t["family"])
+                self.report.add("info", "fonts",
+                                "font %r is not imported; Godot uses its default font. Drop the "
+                                ".ttf into the project and set it on the theme." % t["family"])
         elif cls == "Button":
             props.append("text = %s" % gd_string(self._label_text(n)))
+            style = str(p.get("style", "primary")).strip().lower()
+            if style not in ("primary", "default", ""):
+                v = self._variations_for_button(style)
+                props.append("theme_type_variation = &\"%s\"" % v)
+        elif cls == "LinkButton":
+            props.append("text = %s" % gd_string(self._label_text(n)))
+            # The link's own layout centers its text; a LinkButton has no alignment,
+            # so center the control itself instead of stretching it left-aligned.
+            if (n.get("layout") or {}).get("primaryAlign") == "CENTER":
+                props = [x for x in props if not x.startswith("size_flags_horizontal")]
+                props.append("size_flags_horizontal = 4")
+            uri = p.get("url") or p.get("uri")
+            if uri:
+                props.append("uri = %s" % gd_string(str(uri)))
+            else:
+                self.report.add("warn", "%s/%s" % (self.where, n["name"]),
+                                "link has no url property; it will not open anything")
+            props.append("underline = 0")
         elif cls in ("CheckButton", "CheckBox"):
             props.append("text = %s" % gd_string(self._label_text(n)))
-            if p.get("checked"):
+            if truthy(p.get("checked")):
                 props.append("button_pressed = true")
         elif cls == "LineEdit":
             if p.get("placeholder"):
@@ -355,16 +392,16 @@ class Converter:
             if p.get("value"):
                 props.append("text = %s" % gd_string(str(p["value"])))
         elif cls == "HSlider":
-            props += ["max_value = %s" % num(p.get("max", 1)),
-                      "step = %s" % num(p.get("step", 0.01)),
-                      "value = %s" % num(p.get("value", 0.5))]
+            props += ["max_value = %s" % num(as_float(p.get("max"), 1)),
+                      "step = %s" % num(as_float(p.get("step"), 0.01)),
+                      "value = %s" % num(as_float(p.get("value"), 0.5))]
         elif cls == "ProgressBar":
-            props += ["max_value = %s" % num(p.get("max", 100)),
-                      "value = %s" % num(p.get("value", 50)),
+            props += ["max_value = %s" % num(as_float(p.get("max"), 100)),
+                      "value = %s" % num(as_float(p.get("value"), 50)),
                       "show_percentage = false"]
         elif cls == "OptionButton":
             opts = p.get("options") or [self._label_text(n)]
-            props += ["selected = %d" % int(p.get("selected", 0)),
+            props += ["selected = %d" % int(as_float(p.get("selected"), 0)),
                       "item_count = %d" % len(opts)]
             for i, o in enumerate(opts):
                 props += ["popup/item_%d/text = %s" % (i, gd_string(o)),
@@ -386,6 +423,17 @@ class Converter:
             self.report.add("warn", "%s/%s" % (self.where, n["name"]),
                             "unknown godotType %r; node skipped" % cls)
             return
+        # Label size of a widget comes from its first text child (the exporter
+        # keeps it as `text` on property-bearing instances).
+        wt = n.get("text") or {}
+        if cls in ("Button", "LinkButton", "CheckButton", "CheckBox") and wt.get("size") \
+                and round(wt["size"]) != self.tokens.body_size():
+            props.append("theme_override_font_sizes/font_size = %d" % round(wt["size"]))
+        unknown = set(p) - KNOWN_PROPS.get(cls, set(p))
+        if unknown:
+            self.report.add("info", "%s/%s" % (self.where, n["name"]),
+                            "component properties not used by a Godot %s: %s"
+                            % (cls, ", ".join(sorted(unknown))))
         gn = self._add(parent, n["name"], typ, props)
         # Text children of widgets (a Button's label) are consumed above; other
         # children of a widget cannot be represented and are reported.

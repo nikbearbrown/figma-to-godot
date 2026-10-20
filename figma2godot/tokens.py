@@ -2,6 +2,8 @@
 from .util import (parse_color, color_expr, lighten, darken, with_alpha, num,
                    slug)
 
+# Theme types whose look comes straight from the roles below.
+
 # Fallbacks used when a design has no variable for a role. Every use is
 # reported, so a missing token never silently becomes a magic color.
 DEFAULT_COLORS = {
@@ -19,8 +21,12 @@ class Tokens:
     def __init__(self, design, report):
         self.report = report
         self.collections = design.get("collections", [])
+        # A theme is a mode of a *multi-mode* collection. Single-mode collections
+        # (metrics, a shared palette) have one mode, typically named "Value", and
+        # must not become themes of their own.
         self.modes = []
-        for col in self.collections:
+        multi = [c for c in self.collections if len(c.get("modes", [])) > 1]
+        for col in (multi or self.collections):
             for m in col.get("modes", []):
                 if m not in self.modes:
                     self.modes.append(m)
@@ -45,8 +51,11 @@ class Tokens:
         return vals.get(mode, vals.get(first))
 
     def color(self, name, mode):
-        """Color variable 'color/<name>' in a mode, as an rgba tuple."""
-        full = name if name.startswith("color/") else "color/" + name
+        """A color variable in a mode, as an rgba tuple.
+
+        `name` is a full variable name ("brick/red", "color/panel") or a bare
+        role ("panel", meaning "color/panel")."""
+        full = name if name in self._vars else (name if name.startswith("color/") else "color/" + name)
         raw = self.raw(full, mode)
         if raw is not None:
             return parse_color(raw)
@@ -69,6 +78,34 @@ class Tokens:
                                 % (role, DEFAULT_COLORS[role]))
             return parse_color(DEFAULT_COLORS[role])
         raise KeyError("unknown color variable color/" + role)
+
+    def button_colors(self, style, mode):
+        """normal/hover/pressed/disabled/text colors for a Button style variant.
+
+        Reads color/button-<style> and color/button-<style>-text; hover, pressed
+        and disabled come from color/button-<style>-hover etc. when present,
+        otherwise they are derived from the base color."""
+        base_name = "color/button-%s" % style
+        if not self.has(base_name):
+            key = ("style", style)
+            if key not in self._warned:
+                self._warned.add(key)
+                self.report.add("warn", "theme", "no variable '%s'; button style %r uses the "
+                                "primary button colors" % (base_name, style))
+            return None
+        base = self.color(base_name, mode)
+
+        def pick(suffix, derive):
+            n = "%s-%s" % (base_name, suffix)
+            return self.color(n, mode) if self.has(n) else derive(base)
+        text_name = base_name + "-text"
+        return {
+            "normal": base,
+            "hover": pick("hover", lambda c: lighten(c, 0.12)),
+            "pressed": pick("pressed", lambda c: darken(c, 0.15)),
+            "disabled": pick("disabled", lambda c: with_alpha(c, 0.4)),
+            "text": self.color(text_name, mode) if self.has(text_name) else self.color("button-text", mode),
+        }
 
     def number(self, name, mode):
         raw = self.raw(name, mode)
@@ -108,7 +145,7 @@ class StyleBox:
         return sid
 
 
-def build_theme(tokens, mode, variations):
+def build_theme(tokens, mode, variations, icons=None):
     """Return the text of theme_<mode>.tres.
 
     `variations` is the registry collected while converting scenes: each entry
@@ -117,6 +154,13 @@ def build_theme(tokens, mode, variations):
     """
     sb = StyleBox()
     res = []
+    icons = icons or {}  # key -> res:// path of a generated texture
+    ext = []             # (id, path) for the .tres header
+    def icon(theme_type, item, key):
+        if key in icons:
+            rid = "icon_%s" % len(ext)
+            ext.append((rid, icons[key]))
+            res.append('%s/icons/%s = ExtResource("%s")' % (theme_type, item, rid))
     c = lambda role: tokens.color(role, mode)  # noqa: E731
     n = lambda name: tokens.number(name, mode)  # noqa: E731
 
@@ -150,6 +194,13 @@ def build_theme(tokens, mode, variations):
         res.append("%s/colors/font_hover_color = %s" % (typ, color_expr(c("text"))))
         res.append("%s/colors/font_pressed_color = %s" % (typ, color_expr(c("text"))))
         res.append("%s/colors/font_hover_pressed_color = %s" % (typ, color_expr(c("text"))))
+    for item, key in (("checked", "on"), ("unchecked", "off"), ("checked_disabled", "on_disabled"),
+                      ("unchecked_disabled", "off_disabled")):
+        icon("CheckButton", item, key)
+
+    # Links (Fat Weasel's coffee link is a LinkButton with a uri)
+    for st in ("font_color", "font_hover_color", "font_pressed_color", "font_focus_color"):
+        res.append("LinkButton/colors/%s = %s" % (st, color_expr(c("accent"))))
 
     # Inputs
     sid = sb.flat(c("input"), ri, border=c("border"), border_w=1,
@@ -170,8 +221,10 @@ def build_theme(tokens, mode, variations):
     res.append("ProgressBar/styles/fill = SubResource(\"%s\")" % fill)
     res.append("ProgressBar/colors/font_color = " + color_expr(c("text")))
     # A flat stylebox has no intrinsic height; the slider needs margins to get a track.
-    s_track = sb.flat(c("input"), 4, border=c("border"), border_w=1, margins=(0, 4, 0, 4))
-    s_fill = sb.flat(c("accent"), 4, margins=(0, 4, 0, 4))
+    s_track = sb.flat(c("input"), 5, border=c("border"), border_w=1, margins=(0, 5, 0, 5))
+    s_fill = sb.flat(c("accent"), 5, margins=(0, 5, 0, 5))
+    for item, key in (("grabber", "knob"), ("grabber_highlight", "knob"), ("grabber_disabled", "knob_disabled")):
+        icon("HSlider", item, key)
     res.append("HSlider/styles/slider = SubResource(\"%s\")" % s_track)
     res.append("HSlider/styles/grabber_area = SubResource(\"%s\")" % s_fill)
     res.append("HSlider/styles/grabber_area_highlight = SubResource(\"%s\")" % s_fill)
@@ -187,12 +240,29 @@ def build_theme(tokens, mode, variations):
             sid = sb.flat(bg, v.get("radius", 0), border=border, border_w=bw)
             res.append("%s/base_type = &\"%s\"" % (name, v["base"]))
             res.append("%s/styles/panel = SubResource(\"%s\")" % (name, sid))
+        elif v["kind"] == "button":
+            cols = tokens.button_colors(v["style"], mode)
+            if cols is None:
+                cols = {"normal": c("button"), "hover": c("button-hover"),
+                        "pressed": c("button-pressed"),
+                        "disabled": c("button-disabled"), "text": c("button-text")}
+            res.append("%s/base_type = &\"Button\"" % name)
+            for st in ("normal", "hover", "pressed", "disabled"):
+                sid = sb.flat(cols[st], rb, margins=margins)
+                res.append("%s/styles/%s = SubResource(\"%s\")" % (name, st, sid))
+            for fc in ("font_color", "font_hover_color", "font_pressed_color"):
+                res.append("%s/colors/%s = %s" % (name, fc, color_expr(cols["text"])))
+            res.append("%s/colors/font_disabled_color = %s" % (name, color_expr(c("text-muted"))))
         elif v["kind"] == "text":
             col = _var_color(tokens, v, mode)
             res.append("%s/base_type = &\"%s\"" % (name, v["base"]))
             res.append("%s/colors/font_color = %s" % (name, color_expr(col)))
 
-    out = ["[gd_resource type=\"Theme\" load_steps=%d format=3]" % (len(sb.items) + 1), ""]
+    out = ["[gd_resource type=\"Theme\" load_steps=%d format=3]" % (len(sb.items) + len(ext) + 1), ""]
+    for rid, path in ext:
+        out.append('[ext_resource type="Texture2D" path="%s" id="%s"]' % (path, rid))
+    if ext:
+        out.append("")
     for sid, lines in sb.items:
         out.append("[sub_resource type=\"StyleBoxFlat\" id=\"%s\"]" % sid)
         out += lines

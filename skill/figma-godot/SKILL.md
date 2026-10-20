@@ -18,8 +18,10 @@ read the report, and verify in Godot.
    any `use_figma` call), then run `exporter/export.js` through `use_figma`. It
    returns a `figma-to-godot/0.1` design JSON (frames + variable collections).
    Save it as `<name>.design.json`.
-   - The exporter is not yet verified on a live file. Compare its JSON with the
-     frames before trusting it, and say so in your report.
+   - The exporter has run live on one real file. Pass `OPTS` (see docs/SCHEMA.md) to
+     export frames across pages, and compare its JSON with the frames before trusting it.
+   - `use_figma` forbids `setPluginData`; tag a component through its name (`Coffee Link`,
+     `Toggle`) or its `Style` variant instead.
    - Fallback if `use_figma` is unavailable: `get_variable_defs` +
      `get_metadata` + `get_design_context` give the same facts; assemble the JSON
      by hand against [docs/SCHEMA.md](../../docs/SCHEMA.md).
@@ -41,9 +43,10 @@ read the report, and verify in Godot.
   Missing roles use loud, reported fallbacks.
 - Bind frame fills and text colors to variables, not literal hex: bound colors
   become theme type variations and re-color when the mode changes.
-- Components are matched by name (`Button/Primary`, `Toggle`, `Text Field`,
-  `Slider`, `Dropdown`, `Progress Bar`, `Divider`, `Icon`). Override with plugin
-  data `godotType` on the node or component.
+- Components are matched by name (`Button`, `Toggle`, `Text Field`, `Slider`,
+  `Dropdown`, `Progress Bar`, `Divider`, `Icon`, and `Coffee Link` / any `Link` for a
+  LinkButton with a `URL` property). A Button `Style` variant (Secondary, Tertiary,
+  Quiet) needs `color/button-<style>` and `color/button-<style>-text` variables.
 - Auto-layout is the contract. Frames without auto-layout become absolutely
   positioned Controls (right for HUD overlays, wrong for responsive menus).
 

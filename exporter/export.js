@@ -1,8 +1,9 @@
 // figma-to-godot exporter: Figma Plugin API -> "figma-to-godot/0.1" design JSON.
 //
-// STATUS: written against the official Plugin API typings (plugin-typings,
-// dynamic-page safe: only the *Async variants). NOT yet run against a live
-// Figma file. Treat the first run as a test and compare with the frames.
+// STATUS: first run against a live Figma file succeeded on 2026-10-20 (variables
+// with aliases and modes, bound fills, auto-layout, component properties).
+// Written against the official Plugin API typings (dynamic-page safe: only the
+// *Async variants).
 //
 // Run it any of these ways:
 //   1. Claude + the Figma MCP: pass this file's body to `use_figma` (load the
@@ -12,6 +13,15 @@
 // Exports the current selection (frames), or every top-level frame on the page.
 
 const SCHEMA = "figma-to-godot/0.1";
+// Optional: define `const OPTS = {skipCollections: true, frameIds: [...], file: "Name"}`
+// above this file. skipCollections exports frames only; frameIds picks frames
+// explicitly (across pages); file names the design.
+const _opts = typeof OPTS !== "undefined" ? OPTS : {};
+
+// use_figma forbids setPluginData and may reject reads; never let that abort an export.
+const pd = (node, key) => {
+  try { return node && node.getPluginData ? node.getPluginData(key) : ""; } catch (e) { return ""; }
+};
 
 const hex = (c, a = 1) => {
   const h = (v) => Math.round(v * 255).toString(16).padStart(2, "0").toUpperCase();
@@ -47,7 +57,10 @@ async function exportCollections() {
     }
     out.push({ name: col.name, modes, variables });
   }
-  return { collections: out, defaultMode: out[0] ? out[0].modes[0] : "Default" };
+  // The default mode comes from the collection with the most modes (the themes),
+  // not from whichever collection happens to be first.
+  const themed = out.slice().sort((a, b) => b.modes.length - a.modes.length)[0];
+  return { collections: out, defaultMode: themed ? themed.modes[0] : "Default" };
 }
 
 async function paintToFill(paints) {
@@ -82,7 +95,7 @@ async function exportNode(node, parent) {
     width: Math.round(node.width),
     height: Math.round(node.height),
   };
-  const godotType = node.getPluginData && node.getPluginData("godotType");
+  const godotType = pd(node, "godotType");
   if (godotType) o.godotType = godotType;
 
   if ("layoutSizingHorizontal" in node) {
@@ -140,17 +153,38 @@ async function exportNode(node, parent) {
     if (main) {
       const set = main.parent && main.parent.type === "COMPONENT_SET" ? main.parent : null;
       o.component = set ? set.name + "/" + main.name : main.name;
-      const mainType = main.getPluginData && main.getPluginData("godotType");
+      const mainType = pd(main, "godotType");
       if (mainType && !o.godotType) o.godotType = mainType;
     }
     const props = {};
     for (const [key, p] of Object.entries(node.componentProperties || {})) {
       props[key.split("#")[0].trim().toLowerCase()] = p.value;
     }
-    if (Object.keys(props).length) o.properties = props;
+    if (Object.keys(props).length) {
+      o.properties = props;
+      // The widget's label style (size, color) is all the converter needs from
+      // its internals, so keep the first text child as `text`.
+      const ft = node.findOne((n) => n.type === "TEXT");
+      if (ft) {
+        const tf = await paintToFill(ft.fills === figma.mixed ? [] : ft.fills);
+        o.text = {
+          characters: ft.characters,
+          size: ft.fontSize === figma.mixed ? 16 : ft.fontSize,
+          family: ft.fontName === figma.mixed ? undefined : ft.fontName.family,
+          align: ft.textAlignHorizontal,
+          autoResize: ft.textAutoResize === "NONE" ? "NONE"
+            : ft.textAutoResize === "HEIGHT" ? "HEIGHT" : "WIDTH_AND_HEIGHT",
+        };
+        if (tf) o.text.color = tf;
+      }
+    }
   }
 
-  if ("children" in node) {
+  // An instance that carries component properties is a widget: its label, state
+  // and style are already in `properties`, and its internals are implementation
+  // detail. Dropping them keeps the JSON small. Instances without properties
+  // (a logo, a decorative group) keep their children.
+  if ("children" in node && !(t === "INSTANCE" && o.properties)) {
     o.children = [];
     for (const ch of node.children) {
       const c = await exportNode(ch, node);
@@ -161,10 +195,20 @@ async function exportNode(node, parent) {
 }
 
 async function exportDesign() {
-  let frames = figma.currentPage.selection.filter((n) => n.type === "FRAME");
-  if (!frames.length) frames = figma.currentPage.children.filter((n) => n.type === "FRAME");
-  const tokens = await exportCollections();
-  const out = { schema: SCHEMA, file: figma.root.name, ...tokens, frames: [] };
+  let frames = [];
+  if (_opts.frameIds) {
+    // Explicit frames, possibly across pages: OPTS.frameIds = ["3:2", "4:2"]
+    for (const id of _opts.frameIds) {
+      const n = await figma.getNodeByIdAsync(id);
+      if (n && n.type === "FRAME") frames.push(n);
+    }
+  } else {
+    frames = figma.currentPage.selection.filter((n) => n.type === "FRAME");
+    if (!frames.length) frames = figma.currentPage.children.filter((n) => n.type === "FRAME");
+  }
+  const tokens = _opts.skipCollections ? {} : await exportCollections();
+  // figma.root.name is "Document" in plugin context; pass OPTS.file to name the design.
+  const out = { schema: SCHEMA, file: _opts.file || figma.root.name, ...tokens, frames: [] };
   for (const f of frames) out.frames.push(await exportNode(f, null));
   return out;
 }

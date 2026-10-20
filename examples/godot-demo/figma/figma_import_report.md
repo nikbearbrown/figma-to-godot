@@ -8,4 +8,4 @@ What the import could not express exactly, and why.
 
 ## info (1)
 
-- `MainMenu/Title`: font 'Recursive' not imported; Godot uses the theme font. Drop the .ttf into the project and set it on the theme.
+- `fonts`: font 'Recursive' is not imported; Godot uses its default font. Drop the .ttf into the project and set it on the theme.

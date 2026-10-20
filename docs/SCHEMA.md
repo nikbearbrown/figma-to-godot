@@ -44,6 +44,7 @@ Figma plugin, or Claude assembling it from the Figma MCP's read tools.
   "text": {"characters": "Settings", "size": 32, "family": "Recursive",
            "align": "LEFT | CENTER | RIGHT", "autoResize": "WIDTH_AND_HEIGHT | HEIGHT | NONE",
            "color": {"color": "#E8E8EC", "var": "color/text"}},
+  "text": {...},                                         // on an INSTANCE with properties: its first text child (label size/color)
   "asset": "icon_sword.png",                              // IMAGE: file under <subdir>/assets/
   "effects": ["DROP_SHADOW"], "rotation": 0,              // reported, not imported
   "children": [ /* nodes */ ]
@@ -53,5 +54,11 @@ Figma plugin, or Claude assembling it from the Figma MCP's read tools.
 Colors are `#RGB`, `#RRGGBB` or `#RRGGBBAA`. A `var` is the Figma variable's
 name; `color` is its value in the default mode and is the fallback when the
 variable is not in `collections`.
+
+Component `properties` are the instance's Figma component properties with names lower-cased and the `#id` suffix removed. Variant booleans and numbers arrive as strings; the converter coerces them.
+
+An INSTANCE that has properties is treated as a widget and exported **without children** (its label and state are in `properties` and `text`). An instance without properties keeps its children.
+
+Exporter options, defined above the script as `const OPTS = {...}`: `skipCollections` (frames only), `frameIds` (explicit frames, across pages) and `file` (the design name; `figma.root.name` is just "Document" in plugin context).
 
 A complete worked example is `examples/game-ui.design.json`.

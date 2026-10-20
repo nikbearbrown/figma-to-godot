@@ -6,6 +6,7 @@ import sys
 
 from .tokens import Tokens, build_theme, mode_file
 from .scene import Converter, Report
+from . import icons as icon_gen
 from .util import slug
 
 SCHEMA = "figma-to-godot/0.1"
@@ -26,6 +27,12 @@ static func apply(root: Control, mode: String) -> void:
 		return
 	root.theme = load(MODES[key])
 '''
+
+
+def _quiet(tokens, mode):
+    """Toggle 'off' track: the quiet button color if the design has one, else the input color."""
+    return tokens.color("button-quiet", mode) if tokens.has("color/button-quiet") \
+        else tokens.color("input", mode)
 
 
 def load_design(path):
@@ -60,9 +67,15 @@ def build(design, project, subdir="figma"):
 
     for mode in tokens.modes:
         path = os.path.join(theme_dir, mode_file(mode))
+        files = icon_gen.write_mode_icons(
+            os.path.join(theme_dir, "icons"), slug(mode).lower(),
+            {"button": tokens.color("button", mode), "quiet": _quiet(tokens, mode),
+             "border": tokens.color("border", mode), "text": tokens.color("text", mode)})
+        icon_paths = {k: "%s/theme/icons/%s" % (res_root, v) for k, v in files.items()}
         with open(path, "w") as f:
-            f.write(build_theme(tokens, mode, conv.variations))
+            f.write(build_theme(tokens, mode, conv.variations, icons=icon_paths))
         written.append(path)
+        written += [os.path.join(theme_dir, "icons", v) for v in files.values()]
 
     modes = ",\n".join('\t"%s": "%s/theme/%s"' % (m.lower(), res_root, mode_file(m))
                        for m in tokens.modes)

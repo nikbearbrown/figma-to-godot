@@ -46,10 +46,15 @@ Matched by lowercase name of the component (and node), first match wins. Set plu
 | input, text field, text box | `LineEdit` (`placeholder`, `value`) |
 | divider, separator | `HSeparator` / `VSeparator` (by shape) |
 | icon, image, avatar, thumbnail | `TextureRect` |
+| coffee, link | `LinkButton` (`label` text, `url` property becomes `uri`, so a tap opens it) |
 | button, btn, cta | `Button` (text from the `label` property or its text child) |
 | anything else | Plain frame; **reported** so you can tag it |
 
-Component properties are lower-cased by name: `label`, `checked`, `placeholder`, `value`, `max`, `step`, `options`, `selected`.
+Component properties are lower-cased by name: `label`, `checked`, `placeholder`, `value`, `max`, `step`, `options`, `selected`, `style`, `url`. Figma sends them as strings (`"True"`, `"0.7"`); the converter coerces them. A property a widget does not use is listed in the import report.
+
+**Button styles.** A Button instance with a `style` variant other than Primary becomes a theme type variation. `Style=Secondary` reads `color/button-secondary` and `color/button-secondary-text`; hover, pressed and disabled come from `color/button-secondary-hover` etc. if they exist, otherwise they are derived. A style with no matching variable falls back to the primary button and is reported.
+
+**Spacers.** An empty frame is kept as a plain `Control` carrying its sizing, so a `FILL` spacer pushes the controls after it to the end of the box.
 
 ## Text
 
@@ -58,7 +63,7 @@ Component properties are lower-cased by name: `label`, `checked`, `placeholder`,
 | Text node | `Label` |
 | Alignment left / center / right | `horizontal_alignment` 0 / 1 / 2 |
 | Auto-resize height or fixed | `autowrap_mode` = word (smart) |
-| Font size different from `font-size/body` | `theme_override_font_sizes/font_size` |
+| Font size different from `font-size/body` | `theme_override_font_sizes/font_size` (also read from a widget's label, so a 14px link stays 14px) |
 | Fill bound to `color/text` | Theme default (no override) |
 | Fill bound to another variable | `Label` type variation reading that variable |
 | Font family | **Not imported**; reported. Add the `.ttf` to the project and set it on the theme. |
@@ -78,7 +83,9 @@ One `theme_<mode>.tres` per variable mode. Collections that lack a mode use thei
 | `font-size/body` | Theme default font size |
 | `spacing/button-x`, `spacing/button-y` | Button padding |
 
-A missing variable uses a built-in default and adds a **warn** row to the report.
+A missing variable uses a built-in default and adds a **warn** row to the report. Any variable name can be bound (`brick/red`, `pop/cyan`), not only `color/...`. A collection with one mode (a shared palette, metrics) is read for values but never becomes a theme; themes are the modes of the multi-mode collections.
+
+**Generated icons.** Godot's default toggle switch and slider knob are light-colored and ignore the theme, so for each mode the converter writes `theme/icons/toggle_<mode>_{on,off,on_disabled,off_disabled}.png` and `slider_<mode>_knob*.png` in that mode's colors (track = `color/button` when on, `color/button-quiet` or `color/input` when off; knob = `color/text`).
 
 Swap at runtime with the generated helper: `FigmaTheme.apply($MainMenu, "Light")`.
 
@@ -88,7 +95,9 @@ Effects (shadows, blurs), rotation, blend modes, masks, ellipses and vectors, gr
 
 ## Known limitations
 
-- **Toggle and slider icons.** Godot's default toggle switch and slider grabber are light-colored. They are faint on a light theme. Supply icons from Figma to fix that; not automated yet.
+- **Checkbox icons.** Square checkboxes still use Godot's default icon. Toggles (`CheckButton`) and slider knobs are generated.
+- **Icon sharpness.** The generated toggle and knob icons are drawn at design size, so they look slightly soft on a very high-density screen.
+- **Icons inside widgets** (the cup in a link, a glyph in a button) are not imported.
 - **Edits do not return.** One direction only.
 - **Fonts, shadows and vector art** need manual work.
-- **Exporter** (`exporter/export.js`) has not yet been run on a live Figma file.
+- **Exporter** (`exporter/export.js`) has been run on one real Figma file. Gradients, images and plugin-data tagging are untested live; `use_figma` does not allow `setPluginData`, so tag a component through its name instead.

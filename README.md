@@ -10,12 +10,15 @@ Part of [Walker](https://github.com/nikbearbrown/walker), the framework for buil
 
 **Why we are building it.** UI is a large share of the work in most games: menus, HUD, settings, inventory, dialogue, translations, many resolutions. In Godot it means assembling dozens of nodes and a theme by hand, then redoing it whenever the design changes. Figma already holds that design. Converting it, instead of retyping it, removes the repetitive part and lets a designer change a color variable once and update every screen. The full argument is in [docs/WHY.md](docs/WHY.md).
 
-**What was found.** The converter works on the included example. It produces three screens (main menu, settings panel, HUD) that load in Godot 4.7.2 without errors, and swapping the theme from Dark to Light re-colors the bound frames (checked by script, and by looking at rendered screenshots). Along the way rendering caught three real bugs that reading the generated text had not: a toggle drawn as a blue button, an invisible slider track, and a dropdown with no selected item. All three are fixed.
+**What was found.** It works end to end on a real Figma file. A test file with four theme modes, shared components and seven phone screens was exported with the bundled exporter and converted. All seven screens load in Godot 4.7.2 without errors, and swapping the theme re-colors them (checked by script and by rendered screenshots, not only by reading the generated text).
+
+The first real export also exposed bugs a hand-written example had hidden, and each is now fixed and covered by a test: Figma sends component properties as strings (`"0.7"`, `"False"`), so a slider crashed the converter and an unchecked toggle rendered checked; a single-mode "Metrics" collection became a bogus theme; empty spacer frames were dropped; and button style variants (primary, secondary, tertiary) all rendered the same. Rendering also showed that Godot's default toggle and slider icons ignore the theme, so those icons are now generated per mode.
 
 **What is not done.**
-- The Figma-side exporter ([exporter/export.js](exporter/export.js)) is written against the official Plugin API typings but has **not yet been run on a live Figma file**. Until it is, the design JSON in `examples/` is hand-written to match the schema.
 - One direction only: Figma to Godot. Edits in Godot do not go back.
-- Fonts, shadows, vector art, and the default toggle/slider icons on light themes need manual work. [docs/MAPPING.md](docs/MAPPING.md) lists everything that is not imported; every build also writes a report of what it dropped.
+- The exporter has run on one real Figma file (by the author, through the Figma MCP). Other files will find more cases.
+- Fonts, shadows, vector art and images are not imported yet. Every build writes a report of what it dropped; [docs/MAPPING.md](docs/MAPPING.md) lists it all.
+- Tested on Godot 4.7.2 on a Mac only. Nothing was tested on a phone.
 
 ## How it works
 
@@ -81,7 +84,7 @@ The mapping depends on conventions, so name things on purpose:
 | Path | What |
 |---|---|
 | `figma2godot/` | The converter (Python, standard library only) |
-| `exporter/export.js` | Figma Plugin API script that produces the design JSON (**not yet run live**) |
+| `exporter/export.js` | Figma Plugin API script that produces the design JSON (run live on one file) |
 | `skill/figma-godot/` | Claude skill: the workflow end to end |
 | `examples/` | Example design JSON and a Godot project with the generated output |
 | `tests/` | Converter tests, Godot load check, screenshot script |
@@ -89,11 +92,12 @@ The mapping depends on conventions, so name things on purpose:
 
 ## Roadmap
 
-1. Run the exporter on a real Figma file and fix what it gets wrong.
-2. Image and icon export (`exportAsync`) so `TextureRect` and toggle icons come through.
+1. Run the exporter on more real files and fix what it gets wrong.
+2. Image and icon export (`exportAsync`) so `TextureRect` and button icons come through.
 3. Fonts: import the font file and set it on the theme.
 4. Spacing between items (`SPACE_BETWEEN`) with expanding spacers.
 5. A Godot editor plugin so the conversion runs from inside the editor.
+6. Checkbox (square) icons, which still use Godot's default.
 
 ## Related
 

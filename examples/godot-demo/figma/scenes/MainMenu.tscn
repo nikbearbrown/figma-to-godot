@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Theme" path="res://figma/theme/theme_dark.tres" id="1_theme"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Panel_surface_color_bg"
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Clawd's Quest"
+theme_override_font_sizes/font_size = 64
+theme_type_variation = &"Label_text_color_accent"
+
+[node name="Subtitle" type="Label" parent="Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "A game made with Walker"
+theme_override_font_sizes/font_size = 22
+theme_type_variation = &"Label_text_color_text_muted"
+
+[node name="Play" type="Button" parent="Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 56)
+size_flags_horizontal = 4
+text = "Play"
+
+[node name="Settings" type="Button" parent="Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 56)
+size_flags_horizontal = 4
+text = "Settings"
+
+[node name="Quit" type="Button" parent="Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 56)
+size_flags_horizontal = 4
+text = "Quit"

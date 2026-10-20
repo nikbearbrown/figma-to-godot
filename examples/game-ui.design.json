@@ -1,0 +1,114 @@
+{
+  "schema": "figma-to-godot/0.1",
+  "file": "Game UI example",
+  "defaultMode": "Dark",
+  "collections": [
+    {
+      "name": "Theme",
+      "modes": ["Dark", "Light"],
+      "variables": [
+        {"name": "color/bg",          "type": "COLOR", "values": {"Dark": "#16161D", "Light": "#F4F1EA"}},
+        {"name": "color/panel",       "type": "COLOR", "values": {"Dark": "#24242C", "Light": "#FFFFFF"}},
+        {"name": "color/text",        "type": "COLOR", "values": {"Dark": "#E8E8EC", "Light": "#1D1D22"}},
+        {"name": "color/text-muted",  "type": "COLOR", "values": {"Dark": "#8A8A96", "Light": "#6B6B76"}},
+        {"name": "color/accent",      "type": "COLOR", "values": {"Dark": "#FF8A5C", "Light": "#D9531E"}},
+        {"name": "color/button",      "type": "COLOR", "values": {"Dark": "#3B5BDB", "Light": "#2F4AC0"}},
+        {"name": "color/button-text", "type": "COLOR", "values": {"Dark": "#FFFFFF", "Light": "#FFFFFF"}},
+        {"name": "color/input",       "type": "COLOR", "values": {"Dark": "#1B1B22", "Light": "#ECE8DF"}},
+        {"name": "color/input-text",  "type": "COLOR", "values": {"Dark": "#E8E8EC", "Light": "#1D1D22"}},
+        {"name": "color/border",      "type": "COLOR", "values": {"Dark": "#3A3A46", "Light": "#CFC9BB"}},
+        {"name": "radius/button",     "type": "FLOAT", "values": {"Dark": 10, "Light": 10}},
+        {"name": "radius/panel",      "type": "FLOAT", "values": {"Dark": 16, "Light": 16}},
+        {"name": "radius/input",      "type": "FLOAT", "values": {"Dark": 8, "Light": 8}},
+        {"name": "font-size/body",    "type": "FLOAT", "values": {"Dark": 18, "Light": 18}},
+        {"name": "spacing/button-x",  "type": "FLOAT", "values": {"Dark": 20, "Light": 20}},
+        {"name": "spacing/button-y",  "type": "FLOAT", "values": {"Dark": 10, "Light": 10}}
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "type": "FRAME", "name": "MainMenu", "width": 1280, "height": 720,
+      "fill": {"var": "color/bg", "color": "#16161D"},
+      "layout": {"mode": "VERTICAL", "spacing": 18, "padding": [0, 0, 0, 0],
+                 "primaryAlign": "CENTER", "counterAlign": "CENTER"},
+      "children": [
+        {"type": "TEXT", "name": "Title", "sizing": {"h": "HUG", "v": "HUG"},
+         "text": {"characters": "Clawd's Quest", "size": 64, "family": "Recursive",
+                  "color": {"var": "color/accent", "color": "#FF8A5C"}}},
+        {"type": "TEXT", "name": "Subtitle", "sizing": {"h": "HUG", "v": "HUG"},
+         "text": {"characters": "A game made with Walker", "size": 22,
+                  "color": {"var": "color/text-muted", "color": "#8A8A96"}}},
+        {"type": "INSTANCE", "name": "Play", "component": "Button/Primary", "width": 280, "height": 56,
+         "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Play"}},
+        {"type": "INSTANCE", "name": "Settings", "component": "Button/Primary", "width": 280, "height": 56,
+         "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Settings"}},
+        {"type": "INSTANCE", "name": "Quit", "component": "Button/Primary", "width": 280, "height": 56,
+         "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Quit"}}
+      ]
+    },
+    {
+      "type": "FRAME", "name": "Settings", "width": 1280, "height": 720,
+      "fill": {"var": "color/bg", "color": "#16161D"},
+      "layout": {"mode": "VERTICAL", "spacing": 0, "padding": [0, 0, 0, 0],
+                 "primaryAlign": "CENTER", "counterAlign": "CENTER"},
+      "children": [
+        {"type": "FRAME", "name": "Settings Panel", "width": 480, "height": 420,
+         "sizing": {"h": "FIXED", "v": "HUG"}, "radius": 16,
+         "fill": {"var": "color/panel", "color": "#24242C"},
+         "stroke": {"var": "color/border", "color": "#3A3A46", "width": 1},
+         "layout": {"mode": "VERTICAL", "spacing": 16, "padding": [24, 24, 24, 24],
+                    "primaryAlign": "MIN", "counterAlign": "MIN"},
+         "children": [
+           {"type": "TEXT", "name": "Heading", "sizing": {"h": "FILL", "v": "HUG"},
+            "text": {"characters": "Settings", "size": 32}},
+           {"type": "INSTANCE", "name": "Fullscreen", "component": "Toggle", "sizing": {"h": "FILL", "v": "HUG"},
+            "properties": {"label": "Fullscreen", "checked": true}},
+           {"type": "INSTANCE", "name": "Music volume", "component": "Slider", "height": 24,
+            "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"value": 0.7}},
+           {"type": "INSTANCE", "name": "Player name", "component": "Text Field", "height": 44,
+            "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"placeholder": "Player name"}},
+           {"type": "INSTANCE", "name": "Quality", "component": "Dropdown",
+            "sizing": {"h": "FILL", "v": "HUG"}, "properties": {"options": ["Low", "Medium", "High"]}},
+           {"type": "INSTANCE", "name": "Rule", "component": "Divider", "width": 432, "height": 1,
+            "sizing": {"h": "FILL", "v": "FIXED"}},
+           {"type": "FRAME", "name": "Actions", "sizing": {"h": "FILL", "v": "HUG"},
+            "layout": {"mode": "HORIZONTAL", "spacing": 12, "padding": [0, 0, 0, 0],
+                       "primaryAlign": "MIN", "counterAlign": "MIN"},
+            "children": [
+              {"type": "INSTANCE", "name": "Back", "component": "Button", "width": 120, "height": 44,
+               "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Back"}},
+              {"type": "INSTANCE", "name": "Apply", "component": "Button", "height": 44,
+               "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"label": "Apply"}}
+            ]}
+         ]}
+      ]
+    },
+    {
+      "type": "FRAME", "name": "HUD", "width": 1280, "height": 720,
+      "layout": {"mode": "NONE"},
+      "children": [
+        {"type": "FRAME", "name": "Health", "x": 24, "y": 24, "width": 320, "height": 28,
+         "sizing": {"h": "FIXED", "v": "FIXED"},
+         "layout": {"mode": "HORIZONTAL", "spacing": 12, "padding": [0, 0, 0, 0],
+                    "primaryAlign": "MIN", "counterAlign": "CENTER"},
+         "children": [
+           {"type": "TEXT", "name": "HP label", "sizing": {"h": "HUG", "v": "HUG"},
+            "text": {"characters": "HP", "size": 20}},
+           {"type": "INSTANCE", "name": "HP bar", "component": "Progress Bar", "width": 240, "height": 20,
+            "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"value": 72}}
+         ]},
+        {"type": "TEXT", "name": "Score", "x": 1000, "y": 24, "width": 256, "height": 32,
+         "sizing": {"h": "FIXED", "v": "HUG"},
+         "text": {"characters": "SCORE 004200", "size": 24, "align": "RIGHT",
+                  "autoResize": "HEIGHT", "color": {"var": "color/accent", "color": "#FF8A5C"}}},
+        {"type": "TEXT", "name": "Hint", "x": 440, "y": 660, "width": 400, "height": 28,
+         "sizing": {"h": "FIXED", "v": "HUG"},
+         "text": {"characters": "Press E to interact", "size": 18, "align": "CENTER",
+                  "autoResize": "HEIGHT", "color": {"var": "color/text-muted", "color": "#8A8A96"}}},
+        {"type": "ELLIPSE", "name": "Minimap ring", "x": 1100, "y": 560, "width": 140, "height": 140,
+         "effects": [{"type": "DROP_SHADOW"}]}
+      ]
+    }
+  ]
+}

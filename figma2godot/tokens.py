@@ -198,7 +198,7 @@ def build_theme(tokens, mode, variations, icons=None):
                       ("unchecked_disabled", "off_disabled")):
         icon("CheckButton", item, key)
 
-    # Links (Fat Weasel's coffee link is a LinkButton with a uri)
+    # Links (a LinkButton with a uri, e.g. a donate or support link)
     for st in ("font_color", "font_hover_color", "font_pressed_color", "font_focus_color"):
         res.append("LinkButton/colors/%s = %s" % (st, color_expr(c("accent"))))
 

@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Theme swap signboard</title></head><body>
+<script src="core.js"></script>
+<script>
+/* =====================================================================================================
+   THE THEME-SWAP SIGNBOARD (figma-to-godot, "Variables to Theme"). A declared analogy for one converted scene and its two
+   Godot Theme files. The scene stores NAMES (color/bg, color/panel, a literal hex); each Figma variable mode became its own
+   theme file that defines the same names; whichever theme is set on the root decides the colours. Only fills bound to a
+   variable follow the mode; a fill typed as a literal hex does not. Every part and its one true sentence is in NOTES.md.
+   PARTS (10): signboard (the scene) . background window . panel window . literal-colour window . card slot (the root's
+   theme) . DARK card . LIGHT card . bands (one per name, on each card) . card rack (one pocket per mode name) . swap hoist.
+   Not parts (support only): the ground board everything stands on, the two posts and rail the hoist rides on.
+   PROCESS: open scene (DARK card seated) -> swap: the hoist clamps the seated card's top edge and slides it along the rack
+   back into ITS pocket, then clamps the other mode's card, takes it from its pocket and slides it into the slot. The windows show whatever band of
+   the seated card lines up behind them; the name tags and the board never move; the literal band is the same on both cards.
+   ===================================================================================================== */
+window.FIG_A = () => innerWidth <= 560 ? 1.15 : 1.0;                   // tall object: ask for a taller frame (build.py's head sets .75 on desktop)
+for (const k of Object.keys(PALS)) delete PALS[k];                   // Brutalist browns only (core.js hard-codes mint/blue demos)
+PALS.brown = { l:'#D9CDB8', m:'#B39F7F', d:'#7A6A50' };
+const TERRA = '#D97757', INK2 = '#3D3929', WASH = '#CDBFA3', LITERAL = '#B39F7F';
+const mBoard = { l:'#D9CDB8', m:'#B39F7F', d:'#7A6A50' }, mRack = { l:'#EDE4D0', m:'#D3C5A8', d:'#98866A' };
+const mGround = { l:'#F0E9D7', m:'#DDD3BC', d:'#B5A78A' }, mRail = { l:'#E8E2D4', m:'#C9C0AC', d:'#8F8672' };
+const mDeep = { l:'#8A7757', m:'#6A5A40', d:'#3D3929' }, mTerra = { l:'#E58A6B', m:'#D97757', d:'#A8512F' };
+
+/* ---------- the two cards: dark-brown family and cream family; the third band is the same constant tan on both ---------- */
+const CARD = {
+  dark:  { name:'DARK',  body:'#2B281F', bg:'#3D3929', panel:'#73705F', lit:LITERAL, text:'#FAF9F5' },
+  light: { name:'LIGHT', body:'#D5CFBC', bg:'#E5E2D9', panel:'#FAF9F5', lit:LITERAL, text:'#3D3929' },
+};
+const ROWS = [['bg', 'color/bg'], ['panel', 'color/panel'], ['lit', LITERAL]];   // top to bottom: window, its name tag text
+
+/* ---------- geometry (x = depth, y = width, +y toward viewer-left, z = up) ----------
+   One low rack runs along y with three bays of the same width: [LIGHT pocket | slot behind the board | DARK pocket].
+   The cards slide along the rack, so the board stands in the middle bay and the pockets are on either side of it. */
+const ZG = 3, ZS = 6;                                                   // ground board top; floor of the rack
+const GW = 46, GY = 146;                                                // ground board
+const LX0 = 24.8, LX1 = 26.1, LXC = 25.45;                              // a card's thickness (it stands in the lane x 24.4..26.5)
+const BK0 = 22, SX0 = 24.4, SX1 = 26.5, FR0 = 26.5, FR1 = 28.5, BSX0 = 18, BSX1 = 32;   // back plate, slot gap, front plate, rack base
+const CW = 36, CAV = 42, RP = 17, CBOT = 6, CHEAD = 8, CH = CBOT + 3*RP + CHEAD;        // card width, bay width, row pitch, card height 65
+const PLT = ZS + CBOT + 3*RP + 2, WH = 8, WWID = 30;                    // plate top; window height and width
+const TY0 = 8, TY1 = 138, PL = 31, SLC = 73, PD = 115;                  // rack y range; bay centres: LIGHT pocket, slot, DARK pocket
+const BY0 = SLC - CAV/2, BY1 = SLC + CAV/2;                             // the board stands over the middle bay
+const RZ = ZS + 6;                                                      // pocket wall top
+const GPARK = ZS + CH + 6, CZB = GPARK + 13, RB = CZB + 6, RT = RB + 5; // gripper park height (just above a card top); carriage underside; rail
+const wz = r => ZS + CBOT + (2 - r)*RP + 7.5;                           // window centre z (row r: 0 bg, 1 panel, 2 literal); its tag sits just above it
+const nLerp = (a, b, t) => a + (b - a)*t, nClamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+
+// cast shadow: a warm brown wash on the ground board (core.js's castShadow is hard-coded blue)
+const nShadow = pts3 => { const k = SHADOW_LEN / SHADOW_K, [sx, sy] = yawTurn(SH);
+  return clipTo(boardTop(0, 0, GW, GY, ZG, 3), fill(sp(hull(pts3.map(([x, y, z]) => P(x + (z - ZG)*sx*k, y + (z - ZG)*sy*k, ZG)))), WASH)); };
+
+/* ---------- callouts: like xrCallouts, but each label goes to a side I choose and can be nudged (off) ---------- */
+function nCallouts(items, B){
+  const pts = []; for (const x of [B[0], B[1]]) for (const y of [B[2], B[3]]) for (const z of [B[4], B[5]]) pts.push(P(x, y, z));
+  const xmin = Math.min(...pts.map(p => p[0])), xmax = Math.max(...pts.map(p => p[0])), cx = (xmin + xmax)/2;
+  const k = INK_K, u = window.LBL_U ? LBL_U() : 0, fs = u ? 10*u : 8.6*k, hgt = u ? 17*u : fs*1.8, gap = hgt + (u ? 3*u : 3*k);
+  const L = [], R = [];
+  const svgEl = document.getElementById('fig'), vb = svgEl.viewBox.baseVal, btn = document.getElementById('btns');
+  for (const it of items){ const [X, Y] = P(...it.at); ((it.side ? it.side < 0 : X < cx) ? L : R).push({ ...it, X, Y, Ys: Y + (it.off || 0)*k }); }
+  let s = '';
+  let top = { [-1]: fs, [1]: fs + 30*k };
+  if (btn && svgEl.getScreenCTM()){ const r = btn.getBoundingClientRect(), q = new DOMPoint(r.right, r.bottom + 50).matrixTransform(svgEl.getScreenCTM().inverse());
+    if (q.y > 0) top[-1] = q.y + hgt; }
+  { if (window.__ovW !== innerWidth){ window.__ovW = innerWidth; window.__ov = ['.vset', '#stats'].map(sel => document.querySelector(sel)).filter(Boolean).map(e => e.getBoundingClientRect().bottom); }
+    if (window.__ov.length && svgEl.getScreenCTM() && innerWidth > 560){ const q = new DOMPoint(0, Math.max(...window.__ov) + 10).matrixTransform(svgEl.getScreenCTM().inverse()); if (q.y > 0) top[1] = q.y + hgt; } }
+  const leaders = [];
+  for (const [col, side] of [[L, -1], [R, 1]]){
+    col.sort((a, b) => a.Ys - b.Ys);
+    let y = -1e9; for (const c of col){ c.py = Math.max(c.Ys, y + gap, top[side]); y = c.py; }
+    const shift = col.length ? Math.max(0, col.reduce((a, c) => a + c.py - c.Ys, 0) / col.length) : 0;
+    const room = col.length ? col[0].py - top[side] : 0; for (const c of col) c.py -= Math.min(shift, room);
+    for (const c of col){
+      c.n = ((window.__ln || (window.__ln = {}))[c.text] || (__ln[c.text] = Object.keys(__ln).length + 1)); const w = u ? hgt*(c.n > 9 ? 1.3 : 1) : c.text.length*fs*.62 + fs*1.5;
+      let px = side < 0 ? xmin - 10*k - w/2 : xmax + 10*k + w/2; px = Math.max(vb.x + w/2 + 2*k, Math.min(vb.x + vb.width - w/2 - 2*k, px));
+      const ex = px - side*w/2;
+      leaders.push({ t: c.text, pts: [[c.X, c.Y], [ex + side*-4*k, c.py], [ex, c.py]], pill: [px - w/2, c.py - hgt/2, w, hgt] });
+      s += `<g class="tag${c.on ? ' on' : ''}" data-n="${c.n}" data-t="${c.text}"><path d="M${f(c.X)} ${f(c.Y)}L${f(ex + side*-4*k)} ${f(c.py)}L${f(ex)} ${f(c.py)}" fill="none" stroke="${INK}" stroke-width="1"/>`
+        + `<circle cx="${f(c.X)}" cy="${f(c.Y)}" r="${f(1.4*k)}" fill="${INK}"/>`
+        + `<rect x="${f(px - w/2)}" y="${f(c.py - hgt/2)}" width="${f(w)}" height="${f(hgt)}" rx="${f(hgt/2)}" fill="${c.on ? 'var(--accent,#f4b829)' : '#FFFFFF'}" stroke="${INK}" stroke-width="1.2"/>`
+        + `<text x="${f(px)}" y="${f(c.py + fs*.36)}" font-size="${f(fs)}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="800" letter-spacing=".04em" fill="${INK}">${u ? c.n : c.text}</text></g>`;
+    }
+  }
+  window.__leaders = leaders;
+  return s;
+}
+
+/* ---------- a card: flat body, three bands on its front face, a header carrying its mode name ---------- */
+function cardItem(name, cy, zb, hot){
+  const c = CARD[name], y0 = cy - CW/2, y1 = cy + CW/2, z1 = zb + CH, flat = { l:c.body, m:c.body, d:c.body };
+  let s = box(LX0, y0, zb, LX1, y1, z1, flat, toneI, .9);
+  if (facing([1, 0, 0])){ const xf = LX1 + .02;
+    ROWS.forEach(([w], r) => { const za = zb + CBOT + (2 - r)*RP, q = on(PX(xf), rectUV(y0, za, y1, za + RP));
+      s += `<path data-card="${name}" data-win="${w}" data-col="${c[w]}" d="${pd(q)}" fill="${c[w]}"/>` + ink(pd(q), .8); });
+    const hq = on(PX(xf), rectUV(y0, z1 - CHEAD, y1, z1));
+    s += fill(pd(hq), hot ? TERRA : c.body) + ink(pd(hq), .8) + tx(xf + .01, cy, z1 - CHEAD + 3.5, c.name, 3.7, hot ? '#FFFFFF' : c.text, 800); }
+  return { box: [[LX0, y0, zb], [LX1, y1, z1]], svg: s };
+}
+
+/* ---------- the board's front plate: one face with three real holes (evenodd), so no seams; hole walls, edges ---------- */
+function plateSvg(k){
+  const xf = FR1, op = f(1 - .95*k), io = f(1 - .4*k), z0 = ZS, z1 = PLT, y0 = BY0, y1 = BY1;
+  const F = (pts, c) => `<path d="${pd(pts)}" fill="${c}" fill-opacity="${op}"/>`, I = (pts, w) => `<path d="${pd(pts)}" fill="none" stroke="${INK}" stroke-width="${w}" stroke-opacity="${io}" stroke-linejoin="round"/>`;
+  const wy0 = SLC - WWID/2, wy1 = SLC + WWID/2, holes = [0, 1, 2].map(r => [wz(r) - WH/2, wz(r) + WH/2]);
+  const quadX = x => [[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]], holeX = (x, h) => [[x, wy0, h[0]], [x, wy1, h[0]], [x, wy1, h[1]], [x, wy0, h[1]]];
+  let s = '';
+  if (facing([1, 0, 0])){ const d = pd(quadX(xf)) + holes.map(h => pd(holeX(xf, h))).join('');
+    s += `<path d="${d}" fill="${tone([1, 0, 0], mBoard)}" fill-opacity="${op}" fill-rule="evenodd"/>`; }
+  if (facing([-1, 0, 0])){ const d = pd(quadX(FR0)) + holes.map(h => pd(holeX(FR0, h))).join('');
+    s += `<path d="${d}" fill="${tone([-1, 0, 0], mBoard)}" fill-opacity="${op}" fill-rule="evenodd"/>`; }
+  for (const h of holes){                                               // the hole walls: whatever faces the viewer from inside the opening
+    if (vis([0, 0, 1]))  { const q = [[FR0, wy0, h[0]], [FR1, wy0, h[0]], [FR1, wy1, h[0]], [FR0, wy1, h[0]]]; s += F(q, toneI([0, 0, 1], mBoard)) + I(q, .7); }
+    if (vis([0, 0, -1])) { const q = [[FR0, wy0, h[1]], [FR1, wy0, h[1]], [FR1, wy1, h[1]], [FR0, wy1, h[1]]]; s += F(q, toneI([0, 0, -1], mBoard)) + I(q, .7); }
+    if (vis([0, 1, 0]))  { const q = [[FR0, wy0, h[0]], [FR1, wy0, h[0]], [FR1, wy0, h[1]], [FR0, wy0, h[1]]]; s += F(q, toneI([0, 1, 0], mBoard)) + I(q, .7); }
+    if (vis([0, -1, 0])) { const q = [[FR0, wy1, h[0]], [FR1, wy1, h[0]], [FR1, wy1, h[1]], [FR0, wy1, h[1]]]; s += F(q, toneI([0, -1, 0], mBoard)) + I(q, .7); }
+  }
+  if (vis([0, 0, 1]))  { const q = [[FR0, y0, z1], [FR1, y0, z1], [FR1, y1, z1], [FR0, y1, z1]]; s += F(q, tone([0, 0, 1], mBoard)) + I(q, 1); }
+  if (vis([0, 1, 0]))  { const q = [[FR0, y1, z0], [FR1, y1, z0], [FR1, y1, z1], [FR0, y1, z1]]; s += F(q, tone([0, 1, 0], mBoard)) + I(q, 1); }
+  if (vis([0, -1, 0])) { const q = [[FR0, y0, z0], [FR1, y0, z0], [FR1, y0, z1], [FR0, y0, z1]]; s += F(q, tone([0, -1, 0], mBoard)) + I(q, 1); }
+  const fx = facing([1, 0, 0]) ? xf : FR0;
+  s += `<path d="${pd(quadX(fx))}" fill="none" stroke="${INK}" stroke-width="2" stroke-opacity="${io}" stroke-linejoin="round"/>` + holes.map(h => I(holeX(fx, h), 1.4)).join('');
+  return s;
+}
+
+/* ---------- every solid part, as depth-sorted items ---------- */
+function allItems(st, k){
+  const it = [], put = (b, svg) => it.push({ box: b, svg }), ghost = svg => k > 0 ? `<g opacity="${f(1 - .85*k)}">${svg}</g>` : svg;
+  const add = (x0, y0, z0, x1, y1, z1, m, w, g) => { const s = box(x0, y0, z0, x1, y1, z1, m, tone, w); put([[x0, y0, z0], [x1, y1, z1]], g ? ghost(s) : s); };
+  /* CARD RACK: one low base along y; a floor lane for the cards; front and back walls round each pocket; an end stop at each end */
+  add(BSX0, TY0, ZG, BSX1, TY1, ZS, mRack, 1.1, false);
+  for (const [a, b] of [[TY0, BY0], [BY1, TY1]]){ add(21, a, ZS, SX0, b, RZ, mRack, 1.1, false); }
+  { const wall = (a, b) => [[26.5, a, ZS], [29.5, b, RZ], box(26.5, a, ZS, 29.5, b, RZ, mRack, tone, 1.1)];
+    const [a1, b1, s1] = wall(TY0, BY0), [a2, b2, s2] = wall(BY1, TY1);
+    put([a1, b1], s1 + tx(29.53, PL, ZS + 1.8, 'LIGHT', 3.6, INK2, 800)); put([a2, b2], s2 + tx(29.53, PD, ZS + 1.8, 'DARK', 3.6, INK2, 800)); }
+  add(SX0, TY0, ZS, SX1, TY0 + 2, RZ, mRack, .9, false); add(SX0, TY1 - 2, ZS, SX1, TY1, RZ, mRack, .9, false);
+  /* SIGNBOARD: back plate (with the slot's inner face) and the front plate with its three windows, standing on the middle bay */
+  { let s = box(BK0, BY0, ZS, SX0, BY1, PLT, mBoard, tone, 1.1);
+    if (facing([1, 0, 0])) s += `<path d="${pd(on(PX(SX0 + .02), rectUV(BY0, ZS, BY1, PLT)))}" fill="${LITERAL}"/>`;   // the slot's back wall: plain tan (the same tan as the literal band)
+    put([[BK0, BY0, ZS], [SX0, BY1, PLT]], ghost(s)); }
+  put([[FR0, BY0, ZS], [FR1, BY1, PLT]], plateSvg(k));
+  ROWS.forEach(([, tag], r) => put([[FR1, BY0, wz(r) + 4], [FR1 + .05, BY1, wz(r) + 10]], tx(FR1 + .03, SLC, wz(r) + 5.9, tag, 3.8, INK2, 800)));
+  /* the two cards */
+  for (const nm of ['dark', 'light']) { const c = st.cards[nm]; it.push(cardItem(nm, c.y, c.z, st.hot === nm)); }
+  /* SWAP HOIST: carriage riding under the rail, a rod, and a gripper whose jaws close on the card's top edge */
+  const lm = st.working ? mTerra : mDeep, c = st.lev.y, gz = st.lev.g, jo = (1 - st.lev.grip)*1.2;
+  add(22.5, 2, ZG, 28.5, 5, RT, mRail, 1.1, false); add(22.5, 141, ZG, 28.5, 144, RT, mRail, 1.1, false);      // the two posts the rail stands on
+  add(23, 5, RB, 28, 141, RT, mRail, 1.1, false);                                                          // the rail
+  add(22.8, c - 5, CZB, 28.2, c + 5, RB, lm, .9, false);
+  add(LXC - .6, c - .6, gz + 3, LXC + .6, c + .6, CZB, lm, .7, false);
+  add(24.2, c - 5, gz, 26.7, c + 5, gz + 3, lm, .9, false);
+  add(26.15 + jo, c - 3.5, gz - 1.4, 27.25 + jo, c + 3.5, gz, lm, .7, false); add(23.65 - jo, c - 3.5, gz - 1.4, 24.75 - jo, c + 3.5, gz, lm, .7, false);
+  return it;
+}
+
+/* ---------- labels ---------- */
+function nLabels(st){
+  const lit = st.hot, c = st.cards, it = [];
+  it.push({ at: [FR1, BY1 - 3.5, wz(2) + 2.5], text: 'SIGNBOARD (SCENE)', on: false, side: -1 });             // bare plate beside the lowest tag
+  ['BACKGROUND WINDOW', 'PANEL WINDOW', 'LITERAL-COLOUR WINDOW'].forEach((t, r) => it.push({ at: [FR1, SLC, wz(r)], text: t, on: false, side: 1 }));
+  it.push({ at: [LXC, BY0 + 1.5, PLT], text: 'CARD SLOT (THEME)', on: false, side: 1 });                      // the mouth of the slot, at its near end
+  it.push({ at: [LX1 + .05, c.dark.y + 13, c.dark.z + CH - 2], text: 'DARK CARD', on: lit === 'dark', side: -1 });
+  it.push({ at: [LX1 + .05, c.light.y, c.light.z + CH - .9], text: 'LIGHT CARD', on: lit === 'light', side: 1 });
+  it.push({ at: [28.2, st.lev.y, CZB + 3], text: 'SWAP HOIST', on: !!st.working, side: -1 });
+  return it;
+}
+
+/* ---------- scene ---------- */
+function scene(st, m){
+  const k = ease(st.xr || 0), ar = st.open;
+  document.documentElement.dataset.state = [st.open >= 1 ? 'open' : st.open > 0 ? 'opening' : 'closed', 'seated:' + st.mode, 'busy:' + (st.busy ? 1 : 0),
+    'dark:' + st.cards.dark.y.toFixed(1) + ',' + st.cards.dark.z.toFixed(1), 'light:' + st.cards.light.y.toFixed(1) + ',' + st.cards.light.z.toFixed(1), 'lever:' + st.lev.y.toFixed(1) + ',' + st.lev.g.toFixed(1)].join(' ');
+  let s = board(0, 0, GW, GY, ZG, 3, mGround);
+  if (ar <= 0) return s;
+  const sh = nShadow([[BSX0, TY0, ZG], [BSX1, TY0, ZG], [BSX1, TY1, ZG], [BSX0, TY1, ZG], [BSX0, TY0, RZ], [BSX1, TY0, RZ], [BSX1, TY1, RZ], [BSX0, TY1, RZ],
+    [BK0, BY0, PLT], [FR1, BY0, PLT], [FR1, BY1, PLT], [BK0, BY1, PLT], [22, 2, 40], [29, 2, 40], [22, 144, 40], [29, 144, 40]]);
+  s += `<g opacity="${f(ar)}">` + sh + byDepth(allItems(st, k)) + `</g>`;
+  if (ar >= .99) s += nCallouts(nLabels(st), [0, GW, 0, GY, 0, RT]);
+  return s;
+}
+
+/* ---------- behaviour (one state object) ---------- */
+let ui;
+const tw = (dur, fn) => new Promise(res => { let t = 0; ui.animate(dt => { t += dt; const kk = Math.min(1, t/dur); fn(kk); if (kk >= 1){ res(); return false; } return true; }); });
+const HOME = { dark: PD, light: PL };
+function setMode(st, m){ st.mode = m; st.cards[m].y = SLC; const o = m === 'dark' ? 'light' : 'dark'; st.cards[o].y = HOME[o]; }
+async function levTo(g, y){                                             // the hoist moves (y, gripper height) in straight segments; a clamped card rides along
+  const st = ui.st, L = st.lev, carried = st.carry;
+  if (g != null && Math.abs(L.g - g) > .01){ const g0 = L.g; await tw(Math.max(.35, Math.abs(g - g0)/40), kk => { L.g = nLerp(g0, g, ease(kk)); }); }
+  if (y != null && Math.abs(L.y - y) > .01){ const y0 = L.y; await tw(Math.max(.45, Math.abs(y - y0)/(carried ? 80 : 130)), kk => { L.y = nLerp(y0, y, ease(kk)); if (carried) st.cards[carried].y = L.y; }); }
+}
+async function moveCard(name, toY){                                     // clamp the card's top edge, slide it along the rack, let go
+  const st = ui.st, cd = st.cards[name];
+  await levTo(GPARK, null); await levTo(null, cd.y);
+  await levTo(cd.z + CH, null);                                         // down onto the card's top edge
+  await tw(.25, kk => st.lev.grip = kk); st.carry = name; st.hot = name;
+  await levTo(null, toY);
+  await tw(.25, kk => st.lev.grip = 1 - kk); st.carry = null; st.hot = null;
+  await levTo(GPARK, null);
+}
+async function swapTo(m){
+  const st = ui.st;
+  if (st.open < 1) return ui.flash('Open the scene first');
+  if (st.busy) return ui.flash('One swap at a time');
+  if (st.mode === m) return ui.flash((m === 'dark' ? 'Dark' : 'Light') + ' is already in the slot');
+  st.busy = true; st.working = true; const o = st.mode;
+  await moveCard(o, HOME[o]);                                           // the seated card goes back to ITS pocket
+  await moveCard(m, SLC);                                               // the card for the named mode is taken from its pocket and seated
+  await levTo(null, SLC); st.mode = m; st.working = false; st.busy = false;
+}
+async function openScene(){
+  const st = ui.st; if (st.busy) return ui.flash('One step at a time');
+  if (st.open > 0) return ui.flash('The scene is already open');
+  st.busy = true; await tw(1.0, kk => st.open = ease(kk)); st.open = 1; st.busy = false;
+}
+
+ui = mountFigure({
+  fig:'6', turn:'full', title:'Theme swap signboard',
+  size:[GW + 50, GY + 50, RT + 3], center:[GW/2, GY/2], palette:'brown',
+  state:{ open:0, mode:'dark', busy:false, working:false, hot:null, carry:null,
+          cards:{ dark:{ y:SLC, z:ZS }, light:{ y:PL, z:ZS } }, lev:{ y:SLC, g:GPARK, grip:0 } },
+  scene,
+  params(st, q){ if (q.get('open') === '1') st.open = 1; if (q.get('mode') === 'light') setMode(st, 'light'); },
+  buttons:[
+    { label:'Open scene', onClick:() => openScene() },
+    { label:'Theme mode', choices: st => [
+      { label:'Dark', current: st.open >= 1 && st.mode === 'dark', disabled: st.open < 1, why:'Open the scene first', onClick:() => swapTo('dark') },
+      { label:'Light', current: st.open >= 1 && st.mode === 'light', disabled: st.open < 1, why:'Open the scene first', onClick:() => swapTo('light') } ] },
+  ],
+});
+/* house palette over core.js's: cream paper, warm ink, terracotta as the only accent */
+{ const sty = document.createElement('style');
+  sty.textContent = '.ctl:has(#pals){display:none}:root{--paper:#FAF9F5;--ink:#3D3929;--muted:#73705F;--rule:#E5E2D9}body{background-color:#FAF9F5}html body .toast{background:#FFFFFF!important;border-color:#3D3929!important;color:#3D3929!important}html body .toast::before{background:#D97757!important;color:#FFFFFF!important}html body .lgd b{background:#FFFFFF!important}html body .lgd .on b{background:#D97757!important}';
+  document.head.appendChild(sty);
+  const r0 = ui.render; ui.render = () => { r0(); document.documentElement.style.setProperty('--accent', TERRA); }; ui.render(); }
+xrMount(() => ui, () => '');
+/* testing aids: ?seek=open+light+dark:T plays steps on a fake 60 fps clock for T seconds and stops (open ~1 s, each swap ~7 s);
+   ?open=1&mode=light starts in that state; ?clean=1 hides page furniture (stills); ?fast=1 skips the hand filter; ?probe=1 writes data-probe */
+{ const q = new URLSearchParams(location.search), sk = q.get('seek');
+  const probe = () => { const svg = document.getElementById('fig'), m = svg.getScreenCTM(), st = ui.st, out = { mode: st.mode, win: {}, cards: {}, tags: {}, leaders: window.__leaders || [], vb: [svg.viewBox.baseVal.x, svg.viewBox.baseVal.y, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height] };
+    ROWS.forEach(([w], r) => { const [X, Y] = P(FR1, SLC, wz(r)), p = new DOMPoint(X, Y).matrixTransform(m); out.win[w] = [p.x, p.y]; });
+    for (const e of document.querySelectorAll('#art [data-win]')) (out.cards[e.dataset.card] = out.cards[e.dataset.card] || {})[e.dataset.win] = e.dataset.col;
+    for (const t of document.querySelectorAll('#art text')) if (/color\//.test(t.textContent) || /^#/.test(t.textContent)) out.tags[t.textContent] = t.getBoundingClientRect().x.toFixed(1) + ',' + t.getBoundingClientRect().y.toFixed(1);
+    out.state = JSON.parse(JSON.stringify(st, (k2, v) => typeof v === 'number' ? +v.toFixed(2) : v)); document.documentElement.dataset.probe = JSON.stringify(out); };
+  window.__probe = probe;
+  if (sk){ const [list, secs] = sk.split(':'), T = +secs, steps = new Set();
+    ui.animate = s => { steps.add(s); };
+    (async () => { let done = false, t = 0; const dt = 1/60;
+      (async () => { for (const a of list.split('+')) { if (a === 'open') await openScene(); else await swapTo(a); } done = true; })();
+      while (t < T && !done){ for (const s of [...steps]) if (s(dt) === false) steps.delete(s); t += dt; for (let i = 0; i < 30; i++) await Promise.resolve(); }
+      ui.render(); document.documentElement.dataset.seek = 'done ' + t.toFixed(2); setTimeout(() => { ui.render(); probe(); }, 100); })(); }
+  else if (q.get('probe') === '1') setTimeout(probe, 300);
+  if (q.get('clean') === '1'){ const cs = document.createElement('style');
+    cs.textContent = 'html body .toast,html body .zwrap .toast,html body .toast.show,header,.actions,.stats,.vset,.controls,.made-with,.zchip,.lgd,.mcap,#readout{display:none!important}body{background-image:none!important;background:#FAF9F5!important;padding:0!important}'; document.head.appendChild(cs); }
+  if (q.get('fast') === '1') document.getElementById('art').removeAttribute('filter'); }
+</script></body></html>

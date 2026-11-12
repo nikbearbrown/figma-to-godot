@@ -37,6 +37,23 @@ Figma file ──exporter──▶ design.json ──figma2godot──▶ scenes
 
 Same scene, same file. Only the Figma mode changed.
 
+## Built so a coding agent can finish the job
+
+A converted scene is a picture that loads. A game also needs to know what each button does, where controller focus starts, which words are translatable and which platform the screen is for. That intent is written in the Figma layer name as tags:
+
+```
+Play [action=start_game] [focus=first] [key=menu.play]
+```
+
+The converter strips the tags and carries them through. Every scene gets a root script with two signals to listen to, an explicit focus graph and action ids on its controls, and the build writes `figma/HANDOFF.md`: for each screen, every control, its action id, the signal to connect, where focus moves, the string keys, what the check found, and what the design cannot show (remapping, saved settings, text scaling). It is the file the implementing agent reads first. See [docs/AGENT-CONTRACT.md](docs/AGENT-CONTRACT.md).
+
+The design is also checked against 28 game UX rules ([docs/GAME-UX.md](docs/GAME-UX.md)): text size by platform, contrast per theme mode, the TV title-safe area, tap targets, reachable focus, destructive actions without a confirmation, button names written into text, and more. Some are worked out from the design, some are measured in the running Godot scene, and the ones only a person can judge are listed for a person.
+
+```bash
+python3 -m figma2godot lint examples/game-ui.design.json
+godot --headless --path examples/godot-demo --script ../../tests/godot_ux_check.gd
+```
+
 ## Use it
 
 Requires Python 3.9+ and Godot 4.4+ (tested on Godot 4.7.2 only).

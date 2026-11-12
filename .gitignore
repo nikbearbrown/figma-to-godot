@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .godot/
+
+# Godot builds these from strings.csv on import
+*.translation

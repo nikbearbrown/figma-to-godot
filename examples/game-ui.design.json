@@ -33,17 +33,17 @@
       "layout": {"mode": "VERTICAL", "spacing": 18, "padding": [0, 0, 0, 0],
                  "primaryAlign": "CENTER", "counterAlign": "CENTER"},
       "children": [
-        {"type": "TEXT", "name": "Title", "sizing": {"h": "HUG", "v": "HUG"},
+        {"type": "TEXT", "name": "Title [key=menu.title]", "sizing": {"h": "HUG", "v": "HUG"},
          "text": {"characters": "Clawd's Quest", "size": 64, "family": "Recursive",
                   "color": {"var": "color/accent", "color": "#FF8A5C"}}},
-        {"type": "TEXT", "name": "Subtitle", "sizing": {"h": "HUG", "v": "HUG"},
+        {"type": "TEXT", "name": "Subtitle [key=menu.subtitle]", "sizing": {"h": "HUG", "v": "HUG"},
          "text": {"characters": "A game made with Walker", "size": 22,
                   "color": {"var": "color/text-muted", "color": "#8A8A96"}}},
-        {"type": "INSTANCE", "name": "Play", "component": "Button/Primary", "width": 280, "height": 56,
+        {"type": "INSTANCE", "name": "Play [action=start_game] [focus=first] [key=menu.play]", "component": "Button/Primary", "width": 280, "height": 56,
          "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Play"}},
-        {"type": "INSTANCE", "name": "Settings", "component": "Button/Primary", "width": 280, "height": 56,
+        {"type": "INSTANCE", "name": "Settings [action=open_settings] [key=menu.settings]", "component": "Button/Primary", "width": 280, "height": 56,
          "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Settings"}},
-        {"type": "INSTANCE", "name": "Quit", "component": "Button/Primary", "width": 280, "height": 56,
+        {"type": "INSTANCE", "name": "Quit [action=quit_game] [key=menu.quit] [confirm=QuitDialog]", "component": "Button/Primary", "width": 280, "height": 56,
          "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Quit"}}
       ]
     },
@@ -60,15 +60,15 @@
          "layout": {"mode": "VERTICAL", "spacing": 16, "padding": [24, 24, 24, 24],
                     "primaryAlign": "MIN", "counterAlign": "MIN"},
          "children": [
-           {"type": "TEXT", "name": "Heading", "sizing": {"h": "FILL", "v": "HUG"},
+           {"type": "TEXT", "name": "Heading [key=settings.heading]", "sizing": {"h": "FILL", "v": "HUG"},
             "text": {"characters": "Settings", "size": 32}},
-           {"type": "INSTANCE", "name": "Fullscreen", "component": "Toggle", "sizing": {"h": "FILL", "v": "HUG"},
+           {"type": "INSTANCE", "name": "Fullscreen [action=set_fullscreen] [focus=first] [key=settings.fullscreen]", "component": "Toggle", "sizing": {"h": "FILL", "v": "HUG"},
             "properties": {"label": "Fullscreen", "checked": true}},
-           {"type": "INSTANCE", "name": "Music volume", "component": "Slider", "height": 24,
+           {"type": "INSTANCE", "name": "Music volume [action=set_music_volume]", "component": "Slider", "height": 24,
             "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"value": 0.7}},
-           {"type": "INSTANCE", "name": "Player name", "component": "Text Field", "height": 44,
+           {"type": "INSTANCE", "name": "Player name [action=set_player_name]", "component": "Text Field", "height": 44,
             "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"placeholder": "Player name"}},
-           {"type": "INSTANCE", "name": "Quality", "component": "Dropdown",
+           {"type": "INSTANCE", "name": "Quality [action=set_quality]", "component": "Dropdown",
             "sizing": {"h": "FILL", "v": "HUG"}, "properties": {"options": ["Low", "Medium", "High"]}},
            {"type": "INSTANCE", "name": "Rule", "component": "Divider", "width": 432, "height": 1,
             "sizing": {"h": "FILL", "v": "FIXED"}},
@@ -76,16 +76,16 @@
             "layout": {"mode": "HORIZONTAL", "spacing": 12, "padding": [0, 0, 0, 0],
                        "primaryAlign": "MIN", "counterAlign": "MIN"},
             "children": [
-              {"type": "INSTANCE", "name": "Back", "component": "Button", "width": 120, "height": 44,
+              {"type": "INSTANCE", "name": "Back [action=close_settings] [key=common.back]", "component": "Button", "width": 120, "height": 44,
                "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"label": "Back"}},
-              {"type": "INSTANCE", "name": "Apply", "component": "Button", "height": 44,
+              {"type": "INSTANCE", "name": "Apply [action=apply_settings] [key=common.apply]", "component": "Button", "height": 44,
                "sizing": {"h": "FILL", "v": "FIXED"}, "properties": {"label": "Apply"}}
             ]}
          ]}
       ]
     },
     {
-      "type": "FRAME", "name": "HUD", "width": 1280, "height": 720,
+      "type": "FRAME", "name": "HUD [kind=hud]", "width": 1280, "height": 720,
       "layout": {"mode": "NONE"},
       "children": [
         {"type": "FRAME", "name": "Health", "x": 24, "y": 24, "width": 320, "height": 28,
@@ -93,16 +93,16 @@
          "layout": {"mode": "HORIZONTAL", "spacing": 12, "padding": [0, 0, 0, 0],
                     "primaryAlign": "MIN", "counterAlign": "CENTER"},
          "children": [
-           {"type": "TEXT", "name": "HP label", "sizing": {"h": "HUG", "v": "HUG"},
+           {"type": "TEXT", "name": "HP label [key=hud.hp]", "sizing": {"h": "HUG", "v": "HUG"},
             "text": {"characters": "HP", "size": 20}},
            {"type": "INSTANCE", "name": "HP bar", "component": "Progress Bar", "width": 240, "height": 20,
             "sizing": {"h": "FIXED", "v": "FIXED"}, "properties": {"value": 72}}
          ]},
-        {"type": "TEXT", "name": "Score", "x": 1000, "y": 24, "width": 256, "height": 32,
+        {"type": "TEXT", "name": "Score [key=none]", "x": 1000, "y": 24, "width": 256, "height": 32,
          "sizing": {"h": "FIXED", "v": "HUG"},
          "text": {"characters": "SCORE 004200", "size": 24, "align": "RIGHT",
                   "autoResize": "HEIGHT", "color": {"var": "color/accent", "color": "#FF8A5C"}}},
-        {"type": "TEXT", "name": "Hint", "x": 440, "y": 660, "width": 400, "height": 28,
+        {"type": "TEXT", "name": "Hint [prompt=interact] [key=hud.interact]", "x": 440, "y": 660, "width": 400, "height": 28,
          "sizing": {"h": "FIXED", "v": "HUG"},
          "text": {"characters": "Press E to interact", "size": 18, "align": "CENTER",
                   "autoResize": "HEIGHT", "color": {"var": "color/text-muted", "color": "#8A8A96"}}},

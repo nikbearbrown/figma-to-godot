@@ -9,6 +9,7 @@ Mapping in one table (full detail in docs/MAPPING.md):
   TEXT                                Label
   component "Button", "Toggle" ...    Button, CheckButton, LineEdit, HSlider ...
 """
+import posixpath
 import re
 from .util import node_name, gd_string, num, parse_color, as_float, truthy, slug
 
@@ -76,19 +77,24 @@ class GNode:
 
 
 class Converter:
-    def __init__(self, tokens, report, res_theme_path, res_asset_root, asset_dir):
+    def __init__(self, tokens, report, res_theme_path, res_asset_root, asset_dir, res_script_root=None):
         self.tokens, self.report = tokens, report
         self.theme_path = res_theme_path
         self.res_asset_root = res_asset_root
         self.asset_dir = asset_dir
+        self.res_script_root = res_script_root  # None: no screen script, no focus graph (plain 0.1 behavior)
         self.variations = {}  # shared across every scene in the design
         self._fonts_seen = set()
 
     # ---------------------------------------------------------------- public
-    def convert_frame(self, frame):
+    def convert_frame(self, frame, fx=None):
+        """`fx` is the frame's entry from ux.prepare() + ux.lint(): with it the scene gets a
+        screen script, a focus graph, action ids and a safe-area container."""
         self.nodes = []
         self.ext = []  # (type, path, id)
         self.names = {}
+        self.gnodes = {}  # id(design node) -> (GNode, path from the scene root)
+        self.unique = {}  # id(design node) -> unique node name
         self.where = frame["name"]
         self.ext.append(("Theme", self.theme_path, "1_theme"))
         root_name = node_name(frame["name"])
@@ -101,13 +107,72 @@ class Converter:
         if self._surface(frame):
             self._emit_surface(frame, ".", "Panel", "Background", fullrect=True)
         lay = frame.get("layout", {}) or {}
+        safe = None
+        if fx and self.res_script_root and fx["safe"] in ("title", "device"):
+            safe = (fx["safe"], fx["profile"]["safe_inset"])
         if lay.get("mode") in ("VERTICAL", "HORIZONTAL"):
             self._emit_layout_chain(frame, ".", "root", "Content",
-                                    surface=False, place=("full", None))
+                                    surface=False, place=("full", None), safe=safe)
         else:
             for ch in frame.get("children", []):
                 self._emit(ch, ".", ("control", None))
+        if fx and self.res_script_root:
+            self._apply_ux(root, fx)
         return self._render()
+
+    # ------------------------------------------------------------- game UX
+    def _apply_ux(self, root, fx):
+        """Focus neighbors, action ids, string keys and the screen script, from the tags."""
+        from . import ux
+        fx["root_node"] = root.name
+        cs = fx["controls"]
+        g = fx.get("graph") or ux.focus_graph(fx)
+        placed = [(i, c) for i, c in enumerate(cs) if id(c) in self.gnodes]
+        taken = set()
+
+        def make_unique(n, gn):
+            if gn.name in taken:
+                self.report.add("info", "%s/%s" % (self.where, n["name"]),
+                                "another tagged node is already called %r, so this one has no unique name; "
+                                "reach it by its action id" % gn.name)
+                return
+            taken.add(gn.name)
+            gn.props.append("unique_name_in_owner = true")
+            self.unique[id(n)] = gn.name
+
+        side_prop = {"up": "focus_neighbor_top", "down": "focus_neighbor_bottom",
+                     "left": "focus_neighbor_left", "right": "focus_neighbor_right"}
+        for order, (i, c) in enumerate(placed):
+            gn, path = self.gnodes[id(c)]
+            make_unique(c, gn)
+            for side, (j, _src) in g["edges"][i].items():
+                if id(cs[j]) in self.gnodes:
+                    gn.props.append('%s = NodePath("%s")' % (
+                        side_prop[side], posixpath.relpath(self.gnodes[id(cs[j])][1], path)))
+            if len(placed) > 1:
+                nxt = self.gnodes[id(placed[(order + 1) % len(placed)][1])][1]
+                prv = self.gnodes[id(placed[order - 1][1])][1]
+                gn.props.append('focus_next = NodePath("%s")' % posixpath.relpath(nxt, path))
+                gn.props.append('focus_previous = NodePath("%s")' % posixpath.relpath(prv, path))
+            aid, _generated = ux.action_id(c)
+            gn.props.append('metadata/figma_action = &"%s"' % aid)
+        for n in fx["texts"]:
+            if id(n) in self.gnodes:
+                key, _generated = ux.string_key(fx, n)
+                if key:
+                    self.gnodes[id(n)][0].props.append("metadata/figma_key = %s" % gd_string(key))
+        for n in fx["prompts"]:
+            if id(n) in self.gnodes:
+                gn = self.gnodes[id(n)][0]
+                gn.props.append('metadata/figma_prompt = &"%s"' % ux.snake(n["_tags"]["prompt"]))
+                if id(n) not in self.unique:
+                    make_unique(n, gn)
+        self.ext.append(("Script", "%s/figma_screen.gd" % self.res_script_root, "2_screen"))
+        root.props.append('script = ExtResource("2_screen")')
+        if g["first"] is not None and id(cs[g["first"]]) in self.gnodes:
+            root.props.append('initial_focus = NodePath("%s")' % self.gnodes[id(cs[g["first"]])][1])
+        root.props.append('platform = &"%s"' % fx["platform"])
+        root.props.append("design_size = Vector2(%s, %s)" % (num(fx["frame"]["_abs"][2]), num(fx["frame"]["_abs"][3])))
 
     # --------------------------------------------------------------- helpers
     def _used(self, parent, name):
@@ -273,11 +338,11 @@ class Converter:
         props.append("theme_type_variation = &\"%s\"" % var)
         return self._add(parent, name, typ, props)
 
-    def _emit_layout_chain(self, n, parent, parent_kind, name, surface, place):
+    def _emit_layout_chain(self, n, parent, parent_kind, name, surface, place, safe=None):
         lay = n["layout"]
         vertical = lay["mode"] == "VERTICAL"
         pad = lay.get("padding") or [0, 0, 0, 0]
-        has_pad = any(pad)
+        has_pad = any(pad) or bool(safe)
         chain = []  # (type, name, props)
         if surface:
             chain.append(("PanelContainer", name, "surface"))
@@ -300,6 +365,15 @@ class Converter:
             if role == "pad":
                 for side, v in zip(("left", "top", "right", "bottom"), pad):
                     props.append("theme_override_constants/margin_%s = %s" % (side, num(v)))
+                if safe:
+                    # The same container keeps the design's padding and the safe area:
+                    # the larger of the two wins on each side, so nothing is inset twice.
+                    self.ext.append(("Script", "%s/figma_safe_area.gd" % self.res_script_root, "3_safe"))
+                    props.append('script = ExtResource("3_safe")')
+                    props.append('mode = "%s"' % safe[0])
+                    if safe[0] == "title":
+                        props.append("inset = %s" % num(safe[1]))
+                    props.append("design_margins = Vector4i(%s)" % ", ".join(str(int(round(v))) for v in pad))
             if role == "box":
                 al = lay.get("primaryAlign", "MIN")
                 if al == "CENTER":
@@ -435,6 +509,7 @@ class Converter:
                             "component properties not used by a Godot %s: %s"
                             % (cls, ", ".join(sorted(unknown))))
         gn = self._add(parent, n["name"], typ, props)
+        self.gnodes[id(n)] = (gn, self._child_path(parent, gn))
         # Text children of widgets (a Button's label) are consumed above; other
         # children of a widget cannot be represented and are reported.
         if cls in INTERACTIVE:

@@ -101,3 +101,18 @@ Effects (shadows, blurs), rotation, blend modes, masks, ellipses and vectors, gr
 - **Edits do not return.** One direction only.
 - **Fonts, shadows and vector art** need manual work.
 - **Exporter** (`exporter/export.js`) has been run on one real Figma file. Gradients, images and plugin-data tagging are untested live; `use_figma` does not allow `setPluginData`, so tag a component through its name instead.
+
+## Game UI intent (tags in layer names)
+
+| In Figma | In Godot |
+|---|---|
+| `[action=start_game]` on a control | meta `figma_action`, a unique name (`%Play`), and the screen root emits `action` or `value_changed` with that id |
+| `[focus=first]` | the root's `initial_focus`; `figma_screen.gd` grabs it when the screen opens |
+| `[up=]` `[down=]` `[left=]` `[right=]`, or layout when absent | `focus_neighbor_top/bottom/left/right`; `focus_next` and `focus_previous` follow reading order |
+| `[key=menu.play]` | meta `figma_key`, and a row in `strings.csv` |
+| `[prompt=accept]` | meta `figma_prompt`; `figma_input_mode.gd` is written for the game to register |
+| `[platform=console]` on an auto-layout frame | the content container runs `figma_safe_area.gd` in `title` mode (inner 90%) |
+| `[platform=mobile]` or `android` on an auto-layout frame | the same container in `device` mode (asks the phone at run time) |
+| a hand-placed frame (`[kind=hud]`) | no container; positions are kept and the checks report anything outside the safe area |
+
+The full contract is in [AGENT-CONTRACT.md](AGENT-CONTRACT.md).

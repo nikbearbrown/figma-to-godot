@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Theme" path="res://figma/theme/theme_dark.tres" id="1_theme"]
+[ext_resource type="Script" path="res://figma/scripts/figma_screen.gd" id="2_screen"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -10,6 +11,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_theme")
+script = ExtResource("2_screen")
+initial_focus = NodePath("Content/Play")
+platform = &"pc"
+design_size = Vector2(1280, 720)
 
 [node name="Background" type="Panel" parent="."]
 layout_mode = 1
@@ -36,6 +41,7 @@ size_flags_horizontal = 4
 text = "Clawd's Quest"
 theme_override_font_sizes/font_size = 64
 theme_type_variation = &"Label_text_color_accent"
+metadata/figma_key = "menu.title"
 
 [node name="Subtitle" type="Label" parent="Content"]
 layout_mode = 2
@@ -43,21 +49,41 @@ size_flags_horizontal = 4
 text = "A game made with Walker"
 theme_override_font_sizes/font_size = 22
 theme_type_variation = &"Label_text_color_text_muted"
+metadata/figma_key = "menu.subtitle"
 
 [node name="Play" type="Button" parent="Content"]
 layout_mode = 2
 custom_minimum_size = Vector2(280, 56)
 size_flags_horizontal = 4
 text = "Play"
+unique_name_in_owner = true
+focus_neighbor_bottom = NodePath("../Settings")
+focus_next = NodePath("../Settings")
+focus_previous = NodePath("../Quit")
+metadata/figma_action = &"start_game"
+metadata/figma_key = "menu.play"
 
 [node name="Settings" type="Button" parent="Content"]
 layout_mode = 2
 custom_minimum_size = Vector2(280, 56)
 size_flags_horizontal = 4
 text = "Settings"
+unique_name_in_owner = true
+focus_neighbor_top = NodePath("../Play")
+focus_neighbor_bottom = NodePath("../Quit")
+focus_next = NodePath("../Quit")
+focus_previous = NodePath("../Play")
+metadata/figma_action = &"open_settings"
+metadata/figma_key = "menu.settings"
 
 [node name="Quit" type="Button" parent="Content"]
 layout_mode = 2
 custom_minimum_size = Vector2(280, 56)
 size_flags_horizontal = 4
 text = "Quit"
+unique_name_in_owner = true
+focus_neighbor_top = NodePath("../Settings")
+focus_next = NodePath("../Play")
+focus_previous = NodePath("../Settings")
+metadata/figma_action = &"quit_game"
+metadata/figma_key = "menu.quit"

@@ -1,0 +1,421 @@
+{
+  "schema": "figma-to-godot-handoff/1",
+  "design": "Game UI example",
+  "folder": "res://figma",
+  "rules_checked": "2026-11-11",
+  "screens": [
+    {
+      "screen": "MainMenu",
+      "scene": "res://figma/scenes/MainMenu.tscn",
+      "root_node": "MainMenu",
+      "platform": "pc",
+      "kind": "screen",
+      "safe_area": "none",
+      "design_size": [
+        1280,
+        720
+      ],
+      "text_min": 12.0,
+      "target_min": 0,
+      "safe_inset": 0,
+      "initial_focus": "Content/Play",
+      "initial_focus_generated": false,
+      "controls": [
+        {
+          "name": "Play",
+          "type": "Button",
+          "path": "Content/Play",
+          "unique_name": "%Play",
+          "action": "start_game",
+          "action_generated": false,
+          "godot_signal": "pressed",
+          "screen_signal": "action(id, source)",
+          "label": "Play",
+          "string_key": "menu.play",
+          "string_key_generated": false,
+          "focus_first": true,
+          "neighbors": {
+            "down": {
+              "to": "Settings",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Settings",
+          "type": "Button",
+          "path": "Content/Settings",
+          "unique_name": "%Settings",
+          "action": "open_settings",
+          "action_generated": false,
+          "godot_signal": "pressed",
+          "screen_signal": "action(id, source)",
+          "label": "Settings",
+          "string_key": "menu.settings",
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Play",
+              "from": "generated"
+            },
+            "down": {
+              "to": "Quit",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Quit",
+          "type": "Button",
+          "path": "Content/Quit",
+          "unique_name": "%Quit",
+          "action": "quit_game",
+          "action_generated": false,
+          "godot_signal": "pressed",
+          "screen_signal": "action(id, source)",
+          "label": "Quit",
+          "string_key": "menu.quit",
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Settings",
+              "from": "generated"
+            }
+          },
+          "confirm": "QuitDialog",
+          "undo": null,
+          "challenge": null
+        }
+      ],
+      "strings": [
+        {
+          "key": "menu.title",
+          "text": "Clawd's Quest",
+          "node": "Title",
+          "generated": false
+        },
+        {
+          "key": "menu.subtitle",
+          "text": "A game made with Walker",
+          "node": "Subtitle",
+          "generated": false
+        },
+        {
+          "key": "menu.play",
+          "text": "Play",
+          "node": "Play",
+          "generated": false
+        },
+        {
+          "key": "menu.settings",
+          "text": "Settings",
+          "node": "Settings",
+          "generated": false
+        },
+        {
+          "key": "menu.quit",
+          "text": "Quit",
+          "node": "Quit",
+          "generated": false
+        }
+      ],
+      "prompts": [],
+      "registers": []
+    },
+    {
+      "screen": "Settings",
+      "scene": "res://figma/scenes/Settings.tscn",
+      "root_node": "Settings",
+      "platform": "pc",
+      "kind": "screen",
+      "safe_area": "none",
+      "design_size": [
+        1280,
+        720
+      ],
+      "text_min": 12.0,
+      "target_min": 0,
+      "safe_inset": 0,
+      "initial_focus": "Content/Settings Panel/Margin/Box/Fullscreen",
+      "initial_focus_generated": false,
+      "controls": [
+        {
+          "name": "Fullscreen",
+          "type": "CheckButton",
+          "path": "Content/Settings Panel/Margin/Box/Fullscreen",
+          "unique_name": "%Fullscreen",
+          "action": "set_fullscreen",
+          "action_generated": false,
+          "godot_signal": "toggled",
+          "screen_signal": "value_changed(id, on: bool, source)",
+          "label": "Fullscreen",
+          "string_key": "settings.fullscreen",
+          "string_key_generated": false,
+          "focus_first": true,
+          "neighbors": {
+            "down": {
+              "to": "Music volume",
+              "from": "generated"
+            },
+            "right": {
+              "to": "Apply",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Music volume",
+          "type": "HSlider",
+          "path": "Content/Settings Panel/Margin/Box/Music volume",
+          "unique_name": "%Music volume",
+          "action": "set_music_volume",
+          "action_generated": false,
+          "godot_signal": "value_changed",
+          "screen_signal": "value_changed(id, value: float, source)",
+          "label": "",
+          "string_key": null,
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Fullscreen",
+              "from": "generated"
+            },
+            "down": {
+              "to": "Player name",
+              "from": "generated"
+            },
+            "right": {
+              "to": "Apply",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Player name",
+          "type": "LineEdit",
+          "path": "Content/Settings Panel/Margin/Box/Player name",
+          "unique_name": "%Player name",
+          "action": "set_player_name",
+          "action_generated": false,
+          "godot_signal": "text_submitted",
+          "screen_signal": "value_changed(id, text: String, source)",
+          "label": "",
+          "string_key": null,
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Music volume",
+              "from": "generated"
+            },
+            "down": {
+              "to": "Quality",
+              "from": "generated"
+            },
+            "right": {
+              "to": "Apply",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Quality",
+          "type": "OptionButton",
+          "path": "Content/Settings Panel/Margin/Box/Quality",
+          "unique_name": "%Quality",
+          "action": "set_quality",
+          "action_generated": false,
+          "godot_signal": "item_selected",
+          "screen_signal": "value_changed(id, index: int, source)",
+          "label": "",
+          "string_key": null,
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Player name",
+              "from": "generated"
+            },
+            "down": {
+              "to": "Back",
+              "from": "generated"
+            },
+            "left": {
+              "to": "Back",
+              "from": "generated"
+            },
+            "right": {
+              "to": "Apply",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Back",
+          "type": "Button",
+          "path": "Content/Settings Panel/Margin/Box/Actions/Back",
+          "unique_name": "%Back",
+          "action": "close_settings",
+          "action_generated": false,
+          "godot_signal": "pressed",
+          "screen_signal": "action(id, source)",
+          "label": "Back",
+          "string_key": "common.back",
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Quality",
+              "from": "generated"
+            },
+            "right": {
+              "to": "Apply",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        },
+        {
+          "name": "Apply",
+          "type": "Button",
+          "path": "Content/Settings Panel/Margin/Box/Actions/Apply",
+          "unique_name": "%Apply",
+          "action": "apply_settings",
+          "action_generated": false,
+          "godot_signal": "pressed",
+          "screen_signal": "action(id, source)",
+          "label": "Apply",
+          "string_key": "common.apply",
+          "string_key_generated": false,
+          "focus_first": false,
+          "neighbors": {
+            "up": {
+              "to": "Quality",
+              "from": "generated"
+            },
+            "left": {
+              "to": "Back",
+              "from": "generated"
+            }
+          },
+          "confirm": null,
+          "undo": null,
+          "challenge": null
+        }
+      ],
+      "strings": [
+        {
+          "key": "settings.heading",
+          "text": "Settings",
+          "node": "Heading",
+          "generated": false
+        },
+        {
+          "key": "settings.fullscreen",
+          "text": "Fullscreen",
+          "node": "Fullscreen",
+          "generated": false
+        },
+        {
+          "key": "common.back",
+          "text": "Back",
+          "node": "Back",
+          "generated": false
+        },
+        {
+          "key": "common.apply",
+          "text": "Apply",
+          "node": "Apply",
+          "generated": false
+        }
+      ],
+      "prompts": [],
+      "registers": []
+    },
+    {
+      "screen": "HUD",
+      "scene": "res://figma/scenes/HUD.tscn",
+      "root_node": "HUD",
+      "platform": "pc",
+      "kind": "hud",
+      "safe_area": "none",
+      "design_size": [
+        1280,
+        720
+      ],
+      "text_min": 12.0,
+      "target_min": 0,
+      "safe_inset": 0,
+      "initial_focus": null,
+      "initial_focus_generated": false,
+      "controls": [],
+      "strings": [
+        {
+          "key": "hud.hp",
+          "text": "HP",
+          "node": "HP label",
+          "generated": false
+        },
+        {
+          "key": "hud.interact",
+          "text": "Press E to interact",
+          "node": "Hint",
+          "generated": false
+        }
+      ],
+      "prompts": [
+        {
+          "name": "Hint",
+          "prompt": "interact",
+          "path": "Hint",
+          "unique_name": "%Hint"
+        }
+      ],
+      "registers": []
+    }
+  ],
+  "findings": [
+    {
+      "rule": "GUX-FOCUS-STATE",
+      "label": "note",
+      "title": "Every interactive component has a visible focus state",
+      "where": "Game UI example",
+      "msg": "not checked: the export lists no component states. Export with exporter/export.js, or check by eye that every control has a focus state."
+    }
+  ],
+  "not_imported": [
+    {
+      "level": "info",
+      "where": "fonts",
+      "what": "font 'Recursive' is not imported; Godot uses its default font. Drop the .ttf into the project and set it on the theme."
+    },
+    {
+      "level": "warn",
+      "where": "HUD/Minimap ring",
+      "what": "node type ELLIPSE is not supported and was skipped"
+    }
+  ]
+}

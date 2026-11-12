@@ -1,12 +1,16 @@
 """figma2godot build design.json --project path/to/godot_project"""
 import argparse
+import copy
 import json
 import os
+import re
 import sys
 
 from .tokens import Tokens, build_theme, mode_file
 from .scene import Converter, Report
 from . import icons as icon_gen
+from . import ux as ux_mod
+from . import handoff as handoff_mod
 from .util import slug
 
 SCHEMA = "figma-to-godot/0.1"
@@ -43,9 +47,19 @@ def load_design(path):
     return d
 
 
-def build(design, project, subdir="figma"):
+def snake_file(name):
+    """MainMenu, 'Main Menu', mainMenu -> main_menu (Godot's own convention for file names)."""
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", slug(name))
+    return re.sub(r"_+", "_", s).lower()
+
+
+def build(design, project, subdir="figma", platform="pc", snake_files=False):
+    design = copy.deepcopy(design)  # tags are stripped from layer names in place
     report = Report()
+    rules = ux_mod.load_rules()
+    frames_ux = ux_mod.prepare(design, platform, rules)
     tokens = Tokens(design, report)
+    findings = ux_mod.lint(design, frames_ux, tokens, rules)
     res_root = "res://%s" % subdir
     theme_dir = os.path.join(project, subdir, "theme")
     scene_dir = os.path.join(project, subdir, "scenes")
@@ -55,15 +69,22 @@ def build(design, project, subdir="figma"):
     conv = Converter(
         tokens, report,
         "%s/theme/%s" % (res_root, mode_file(tokens.default_mode)),
-        "%s/assets" % res_root, os.path.join(project, subdir, "assets"))
+        "%s/assets" % res_root, os.path.join(project, subdir, "assets"),
+        res_script_root="%s/scripts" % res_root)
 
     written = []
-    for frame in design.get("frames", []):
-        text = conv.convert_frame(frame)
-        path = os.path.join(scene_dir, "%s.tscn" % slug(frame["name"]))
+    screens = []
+    for frame, fx in zip(design.get("frames", []), frames_ux):
+        text = conv.convert_frame(frame, fx)
+        fname = "%s.tscn" % (snake_file(frame["name"]) if snake_files else slug(frame["name"]))
+        path = os.path.join(scene_dir, fname)
         with open(path, "w") as f:
             f.write(text)
         written.append(path)
+        paths = {k: v[1] for k, v in conv.gnodes.items()}
+        screens.append(handoff_mod.screen_record(fx, "%s/scenes/%s" % (res_root, fname), paths, dict(conv.unique)))
+    written += handoff_mod.write_scripts(os.path.join(project, subdir, "scripts"),
+                                         need_prompts=any(s["prompts"] for s in screens))
 
     for mode in tokens.modes:
         path = os.path.join(theme_dir, mode_file(mode))
@@ -88,7 +109,29 @@ def build(design, project, subdir="figma"):
     with open(rpt, "w") as f:
         f.write(report.markdown(design.get("file", "design")))
     written.append(rpt)
+    data = handoff_mod.build_json(design.get("file", "design"), screens, findings, rules, report.items, subdir)
+    written += handoff_mod.write(project, subdir, data, rules)
+    report.findings = findings
     return written, report
+
+
+def lint_design(design, platform="pc"):
+    """The UX findings for a design, without building anything."""
+    design = copy.deepcopy(design)
+    rules = ux_mod.load_rules()
+    frames_ux = ux_mod.prepare(design, platform, rules)
+    return ux_mod.lint(design, frames_ux, Tokens(design, Report()), rules)
+
+
+def print_findings(findings):
+    real = [f for f in findings if f["label"] != "note"]
+    for f in findings:
+        print("%-9s %-24s %s: %s" % (f["label"], f["rule"], f["where"], f["msg"]))
+    counts = {}
+    for f in real:
+        counts[f["label"]] = counts.get(f["label"], 0) + 1
+    print("%d finding(s)%s" % (len(real), (": " + ", ".join("%d %s" % (n, k) for k, n in sorted(counts.items()))) if real else ""))
+    return real
 
 
 def main(argv=None):
@@ -98,12 +141,25 @@ def main(argv=None):
     b.add_argument("design")
     b.add_argument("--project", required=True, help="Godot project folder (has project.godot)")
     b.add_argument("--subdir", default="figma", help="folder inside the project (default: figma)")
+    b.add_argument("--platform", default="pc", choices=sorted(ux_mod.load_rules()["platforms"]),
+                   help="platform for frames with no [platform=] tag (default: pc)")
+    b.add_argument("--snake-files", action="store_true",
+                   help="name scene files in snake_case (main_menu.tscn), Godot's own convention")
+    li = sub.add_parser("lint", help="check a design JSON against the game UX rules; builds nothing")
+    li.add_argument("design")
+    li.add_argument("--platform", default="pc", choices=sorted(ux_mod.load_rules()["platforms"]))
+    li.add_argument("--strict", action="store_true", help="exit 1 if there is any finding")
     args = ap.parse_args(argv)
     design = load_design(args.design)
-    written, report = build(design, args.project, args.subdir)
+    if args.cmd == "lint":
+        real = print_findings(lint_design(design, args.platform))
+        return 1 if (real and args.strict) else 0
+    written, report = build(design, args.project, args.subdir, args.platform, args.snake_files)
     for w in written:
         print(w)
     print("%d report item(s): see %s/figma_import_report.md" % (len(report.items), args.subdir))
+    real = [f for f in report.findings if f["label"] != "note"]
+    print("%d UX finding(s): see %s/HANDOFF.md, the file a coding agent reads first" % (len(real), args.subdir))
     return 0
 
 

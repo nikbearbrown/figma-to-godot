@@ -153,6 +153,13 @@ async function exportNode(node, parent) {
     if (main) {
       const set = main.parent && main.parent.type === "COMPONENT_SET" ? main.parent : null;
       o.component = set ? set.name + "/" + main.name : main.name;
+      // The states a component set offers (Default, Hover, Pressed, Disabled, Focus...), so the
+      // converter can say when a control has no focus state. Read from the set, never from a variant.
+      if (set) {
+        const defs = set.componentPropertyDefinitions || {};
+        const key = Object.keys(defs).find((k) => /^state$/i.test(k.split("#")[0].trim()) && defs[k].type === "VARIANT");
+        if (key) o.states = defs[key].variantOptions || [];
+      }
       const mainType = pd(main, "godotType");
       if (mainType && !o.godotType) o.godotType = mainType;
     }

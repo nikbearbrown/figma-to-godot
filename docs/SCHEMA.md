@@ -57,6 +57,8 @@ variable is not in `collections`.
 
 Component `properties` are the instance's Figma component properties with names lower-cased and the `#id` suffix removed. Variant booleans and numbers arrive as strings; the converter coerces them.
 
+A layer `name` may end in tags, `Play [action=start_game] [focus=first] [key=menu.play]`. The converter strips them before naming nodes and uses them for the focus graph, the action ids and the handoff; see [AGENT-CONTRACT.md](AGENT-CONTRACT.md). An INSTANCE of a component set may carry `"states": ["Default", "Hover", "Pressed", "Focus"]`, the options of its `State` variant, so the lint can tell when a control has no focus state.
+
 An INSTANCE that has properties is treated as a widget and exported **without children** (its label and state are in `properties` and `text`). An instance without properties keeps its children.
 
 Exporter options, defined above the script as `const OPTS = {...}`: `skipCollections` (frames only), `frameIds` (explicit frames, across pages) and `file` (the design name; `figma.root.name` is just "Document" in plugin context).

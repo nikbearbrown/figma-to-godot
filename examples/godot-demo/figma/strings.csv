@@ -1,0 +1,12 @@
+keys,en
+menu.title,Clawd's Quest
+menu.subtitle,A game made with Walker
+menu.play,Play
+menu.settings,Settings
+menu.quit,Quit
+settings.heading,Settings
+settings.fullscreen,Fullscreen
+common.back,Back
+common.apply,Apply
+hud.hp,HP
+hud.interact,Press E to interact

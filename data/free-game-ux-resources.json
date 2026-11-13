@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "title": "Free game UX and wireframe sources",
+  "policy": "Zero required payment only. No paid products, subscriptions, trials, purchases or donations. Links and original metadata only; no third-party files downloaded.",
+  "resources": [
+    {
+      "id": "game-ux-kit",
+      "title": "Game UX Kit — Alena Eresko / Dismantle Studio",
+      "url": "https://www.figma.com/community/file/1460785931676185568/game-ux-kit",
+      "kind": "editable_wireframe",
+      "platforms": [
+        "PC",
+        "iPhone",
+        "Android"
+      ],
+      "platform_note": "Design applicability, not a tested platform compatibility claim.",
+      "formats": [
+        "Figma"
+      ],
+      "cost": {
+        "required_payment": false,
+        "model": "free"
+      },
+      "license": {
+        "name": "Creator permits use and modification; formal redistribution license unverified",
+        "redistribution": "Not verified: link only; do not vendor the kit."
+      },
+      "verification": {
+        "checked_on": "2026-11-11",
+        "sources": [
+          "https://medium.com/@alenaeres/game-ux-kit-5-reasons-that-make-it-an-essential-tool-7ce4ec072b8a"
+        ],
+        "notes": "Creator describes free Figma components and PC/mobile auto-layout. Direct Figma file access and account requirements were not tested."
+      },
+      "downloaded": false,
+      "figma_to_godot_use": "Adapt components to exporter naming and auto-layout conventions before conversion."
+    },
+    {
+      "id": "interface-in-game",
+      "title": "Interface In Game — screenshots",
+      "url": "https://interfaceingame.com/screenshots",
+      "kind": "reference_library",
+      "platforms": [
+        "PC",
+        "iPhone",
+        "Android"
+      ],
+      "platform_note": "Design applicability, not a tested platform compatibility claim.",
+      "formats": [
+        "web screenshots",
+        "video references"
+      ],
+      "cost": {
+        "required_payment": false,
+        "model": "free_public_browsing"
+      },
+      "license": {
+        "name": "Copyright retained by respective owners",
+        "redistribution": "Reference only; no permission to redistribute screenshots or game artwork established."
+      },
+      "verification": {
+        "checked_on": "2026-11-11",
+        "sources": [
+          "https://interfaceingame.com/screenshots"
+        ],
+        "notes": "Public gallery verified with PC and Mobile filters. This entry excludes the separate paid Wireframe Mockup product and all paid extras."
+      },
+      "downloaded": false,
+      "figma_to_godot_use": "Study patterns and build original Figma layouts; never treat screenshots as editable templates."
+    },
+    {
+      "id": "kenney-ui-pack",
+      "title": "Kenney UI Pack",
+      "url": "https://kenney-assets.itch.io/ui-pack",
+      "kind": "ui_assets",
+      "platforms": [
+        "PC",
+        "iPhone",
+        "Android"
+      ],
+      "platform_note": "Design applicability, not a tested platform compatibility claim.",
+      "formats": [
+        "sprites",
+        "vector source"
+      ],
+      "cost": {
+        "required_payment": false,
+        "model": "name_your_price_zero"
+      },
+      "license": {
+        "name": "CC0-1.0",
+        "redistribution": "CC0 permits reuse and redistribution; retain provenance."
+      },
+      "verification": {
+        "checked_on": "2026-11-11",
+        "sources": [
+          "https://kenney-assets.itch.io/ui-pack",
+          "https://creativecommons.org/publicdomain/zero/1.0/"
+        ],
+        "notes": "Official listing confirms CC0 and name-your-price access. Use only the zero-cost option; no optional donation. 400+ sprites with color variations."
+      },
+      "downloaded": false,
+      "figma_to_godot_use": "Use as visual design assets; current converter does not import images or vector art."
+    },
+    {
+      "id": "kenney-input-prompts-pixel-16",
+      "title": "Kenney Input Prompts Pixel 16×",
+      "url": "https://kenney-assets.itch.io/input-prompts-pixel-16",
+      "kind": "input_prompts",
+      "platforms": [
+        "PC",
+        "iPhone",
+        "Android"
+      ],
+      "platform_note": "Design applicability, not a tested platform compatibility claim.",
+      "formats": [
+        "sprites",
+        "tilesheets"
+      ],
+      "cost": {
+        "required_payment": false,
+        "model": "name_your_price_zero"
+      },
+      "license": {
+        "name": "CC0-1.0",
+        "redistribution": "CC0 permits reuse and redistribution; retain provenance."
+      },
+      "verification": {
+        "checked_on": "2026-11-11",
+        "sources": [
+          "https://kenney-assets.itch.io/input-prompts-pixel-16",
+          "https://creativecommons.org/publicdomain/zero/1.0/"
+        ],
+        "notes": "Official listing confirms CC0 and name-your-price access. Keyboard, mouse, gamepad and touch prompts; use only the zero-cost option."
+      },
+      "downloaded": false,
+      "figma_to_godot_use": "Plan keyboard/controller/touch states; add licensed textures manually in Godot, not through automatic image conversion."
+    }
+  ],
+  "unverified_candidates": [
+    {
+      "id": "game-ui-database",
+      "title": "Game UI Database",
+      "url": "https://www.gameuidatabase.com/",
+      "kind": "reference_library",
+      "status": "not_in_verified_free_catalog",
+      "checked_on": "2026-11-11",
+      "reason": "Direct access blocked by robots/restricted fetch. Independent coverage describes free browsing, but current official access and terms could not be verified.",
+      "sources": [
+        "https://www.gamedeveloper.com/design/game-ui-database-relaunches-with-new-features-video-support-and-over-55-000-screenshots"
+      ],
+      "allowed_use": "Link for later manual verification only. No paid extras, downloads or screenshot redistribution.",
+      "downloaded": false
+    }
+  ]
+}

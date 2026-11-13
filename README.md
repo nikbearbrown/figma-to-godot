@@ -37,6 +37,10 @@ Figma file ──exporter──▶ design.json ──figma2godot──▶ scenes
 
 Same scene, same file. Only the Figma mode changed.
 
+## Free game UX resources
+
+See [data/README.md](data/README.md) for free wireframe, UI asset and reference sources for PC and mobile, with a [structured catalog](data/free-game-ux-resources.json), licensing notes and converter limitations. No paid resources or third-party asset bundles are included.
+
 ## Built so a coding agent can finish the job
 
 A converted scene is a picture that loads. A game also needs to know what each button does, where controller focus starts, which words are translatable and which platform the screen is for. That intent is written in the Figma layer name as tags:
